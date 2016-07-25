@@ -40,3 +40,5 @@ func Text(b []byte) string
 func IntWritable(b []byte) int32
 func LongWritable(b []byte) int64
 ```
+
+[2]: https://hadoop.apache.org/docs/r2.6.1/api/org/apache/hadoop/io/BytesWritable.html
