@@ -82,7 +82,6 @@ func testFileSpec(t *testing.T, r *Reader, spec fileSpec) {
 	assert.Equal(t, "Alice", string(BytesWritable(r.Key())), "The key should be correct")
 	assert.Equal(t, "Practice", string(BytesWritable(r.Value())), "The value should be correct")
 
-	offset2, _ := file.Seek(0, os.SEEK_CUR)
 	ok = r.Scan()
 	require.NoError(t, r.Err(), "Scan should succeed")
 	require.True(t, ok, "Scan should succeed")
@@ -96,18 +95,11 @@ func testFileSpec(t *testing.T, r *Reader, spec fileSpec) {
 	require.False(t, ok, "Scan at the end of the file should fail without an error")
 
 	file.Seek(offset1, os.SEEK_SET)
+	r.Reset()
 	ok = r.Scan()
 	require.NoError(t, r.Err(), "Scan should succeed")
 	require.True(t, ok, "Scan should succeed")
 
 	assert.Equal(t, "Alice", string(BytesWritable(r.Key())), "The key should be correct")
 	assert.Equal(t, "Practice", string(BytesWritable(r.Value())), "The value should be correct")
-
-	file.Seek(offset2, os.SEEK_SET)
-	ok = r.Scan()
-	require.True(t, ok)
-	require.NoError(t, r.Err())
-
-	assert.Equal(t, "Bob", string(BytesWritable(r.Key())))
-	assert.Equal(t, "Hope", string(BytesWritable(r.Value())), "The value should be correct")
 }

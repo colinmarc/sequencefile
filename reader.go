@@ -15,10 +15,10 @@ import (
 //
 // A reader is valid at any key or block offset; it's safe to start in the
 // middle of a file or seek the underlying input stream if the location was
-// recorded between calls to Scan. Note, however, that with a block-compressed
-// file (Header.Compression set to BlockCompression), the position will be at
-// the beginning of the block that holds the key, not right before the key
-// itself.
+// recorded between calls to Scan, and as long as you call Reset after seeking.
+// Note, however, that with a block-compressed file (Header.Compression set to
+// BlockCompression), the position will be at the beginning of the block that
+// holds the key, not right before the key itself.
 type Reader struct {
 	Header          Header
 	syncMarkerBytes []byte
@@ -82,6 +82,15 @@ func (r *Reader) Scan() bool {
 	} else {
 		return r.scanRecord()
 	}
+}
+
+// Reset resets the internal state of the reader, but maintains compression
+// settings and header information. You should call Reset if you seek the
+// underlying reader, but should create an entirely new Reader if you are
+// starting a different file.
+func (r *Reader) Reset() {
+	r.clear()
+	r.block = blockReader{}
 }
 
 // Err returns the first non-EOF error reached while scanning.
