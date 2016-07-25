@@ -11,13 +11,14 @@ import (
 	"os"
 )
 
-// A Reader reads key/value pairs from an input stream.
+// A Reader reads key/value pairs from a SequenceFile input stream.
 //
-// A reader is valid at any key or block offset; it's safe to seek the
-// underlying input stream if the location was recorded between calls to Scan or
-// ScanKey. Note, however, that with a block-compressed file
-// (Header.Compression set to BlockCompression), the position will be at the
-// beginning of the block that holds the key, not right before the key itself.
+// A reader is valid at any key or block offset; it's safe to start in the
+// middle of a file or seek the underlying input stream if the location was
+// recorded between calls to Scan. Note, however, that with a block-compressed
+// file (Header.Compression set to BlockCompression), the position will be at
+// the beginning of the block that holds the key, not right before the key
+// itself.
 type Reader struct {
 	Header          Header
 	syncMarkerBytes []byte
@@ -36,7 +37,7 @@ type Reader struct {
 	value []byte
 }
 
-// Open opens a sequencefile on disk and immediately reads the header.
+// Open opens a SequenceFile on disk and immediately reads the header.
 func Open(path string) (*Reader, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -52,14 +53,14 @@ func Open(path string) (*Reader, error) {
 	return r, nil
 }
 
-// New returns a new Reader for sequencefiles, reading data from r. If the
+// New returns a new Reader for a SequenceFile, reading data from r. If the
 // io.Reader is positioned at the start of a file, you should immediately call
 // ReadHeader to read through the header.
 func NewReader(r io.Reader) *Reader {
 	return &Reader{reader: r}
 }
 
-// New returns a new Reader for sequencefiles, reading data from r. Normally,
+// New returns a new Reader for a SequenceFile, reading data from r. Normally,
 // compression options are inferred from the header of a file, but if the header
 // is unavailable (because you're starting mid-stream) you can call this method
 // with the compression options set explicitly.

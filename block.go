@@ -6,8 +6,8 @@ import (
 	"io"
 )
 
-// a blockReader represents an iterator over a single compressed block, for block-
-// compressed sequencefiles.
+// a blockReader represents an iterator over a single compressed block, for
+// block-compressed SequenceFiles.
 type blockReader struct {
 	n     int
 	i     int

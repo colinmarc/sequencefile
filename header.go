@@ -6,7 +6,7 @@ import (
 )
 
 // A Header represents the information contained in the header of the
-// sequencefile.
+// SequenceFile.
 type Header struct {
 	Version                   int
 	Compression               Compression
@@ -18,12 +18,12 @@ type Header struct {
 	SyncMarker                string
 }
 
-// ReadHeader parses the sequencefile header from the input stream, and fills
+// ReadHeader parses the SequenceFile header from the input stream, and fills
 // in the Header struct with the values. This should be called when the reader
 // is positioned at the start of the file or input stream, before any records
 // are read.
 //
-// ReadHeader will also validate that the settings of the sequencefile
+// ReadHeader will also validate that the settings of the SequenceFile
 // (version, compression, key/value serialization, etc) are compatible.
 func (r *Reader) ReadHeader() error {
 	magic, err := r.consume(4)

@@ -1,5 +1,5 @@
 // Package sequencefile provides functionality for reading and writing Hadoop's
-// SequenceFile format, defined here: http://goo.gl/sOSJmJ
+// SequenceFile format, documented here: http://goo.gl/sOSJmJ
 package sequencefile
 
 import "io"
