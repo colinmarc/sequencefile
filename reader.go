@@ -210,15 +210,19 @@ func (r *Reader) consume(n int) ([]byte, error) {
 }
 
 func (r *Reader) consumeCompressed(n int) ([]byte, error) {
-	d, err := r.getDecompressor(io.LimitReader(r.reader, int64(n)))
+	lr := &io.LimitedReader{R: r.reader, N: int64(n)}
+	d, err := r.getDecompressor(lr)
 	if err != nil {
 		return nil, err
 	}
 
 	off := r.buf.Len()
+	r.buf.Grow(n)
 	_, err = r.buf.ReadFrom(d)
 	if err != nil {
 		return nil, err
+	} else if lr.N > 0 {
+		return nil, io.ErrUnexpectedEOF
 	}
 
 	return r.buf.Bytes()[off:r.buf.Len()], nil
@@ -237,7 +241,7 @@ func (r *Reader) getDecompressor(src io.Reader) (io.Reader, error) {
 		case GzipCompression:
 			r.decompressor, err = gzip.NewReader(src)
 		case SnappyCompression:
-			r.decompressor = newSnappyFrameReader(src)
+			r.decompressor, err = newSnappyFrameReader(src)
 		default:
 			panic("compression set without codec")
 		}
