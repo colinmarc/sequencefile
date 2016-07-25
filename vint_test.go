@@ -9,13 +9,11 @@ import (
 )
 
 // To genenerate these tests in a scala shell:
-// scala> import org.apache.hadoop.io.WritableUtils
-// scala> import org.apache.commons.codec.binary.Hex
 // scala> def vIntHex(l: Long) = {
 //   val baos = new java.io.ByteArrayOutputStream()
 //   val dos = new java.io.DataOutputStream(baos)
 //   baos.reset()
-//   WritableUtils.writeVLong(dos, l)
+//   org.apache.hadoop.io.WritableUtils.writeVLong(dos, l)
 //   Hex.encodeHexString(baos.toByteArray)
 // }
 var vints = []struct {
