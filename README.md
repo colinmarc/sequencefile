@@ -34,7 +34,7 @@ depending on the class used, like [BytesWritable][2]. By default, this library
 will return the raw key and value bytes, still serialized. You can use the
 following methods to unwrap them:
 
-```go
+```
 func BytesWritable(b []byte) []byte
 func Text(b []byte) string
 func IntWritable(b []byte) int32
