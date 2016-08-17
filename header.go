@@ -138,14 +138,14 @@ func (r *Reader) readMetadata() error {
 
 func (r *Reader) readString() (string, error) {
 	r.clear()
-	b, err := r.consume(1)
+
+	length, err := ReadVInt(r.reader)
 	if err != nil {
 		return "", err
 	}
 
-	length := int(b[0])
 	r.clear()
-	b, err = r.consume(length)
+	b, err := r.consume(int(length))
 	if err != nil {
 		return "", err
 	}
