@@ -90,10 +90,12 @@ func WriteVInt(w io.Writer, n int64) (error) {
 		len = -(len + 112)
 	}
 
-	for i := len; i != 0; i-- {
-		shiftbits := uint((i - 1) * 8)
-		mask := 0xFF << shiftbits
-		_, err := w.Write([]byte{byte(int8(i & mask) >> shiftbits)})
+	for idx := len; idx != 0; idx-- {
+		shiftbits := uint((idx - 1) * 8)
+		mask := int64(0xFF << shiftbits)
+		masked := n & mask
+		currentbyte := masked >> shiftbits
+		_, err := w.Write([]byte{byte(currentbyte)})
 		if err != nil {
 			return err
 		}
