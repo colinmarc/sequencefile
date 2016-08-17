@@ -137,8 +137,6 @@ func (r *Reader) readMetadata() error {
 }
 
 func (r *Reader) readString() (string, error) {
-	r.clear()
-
 	length, err := ReadVInt(r.reader)
 	if err != nil {
 		return "", err
