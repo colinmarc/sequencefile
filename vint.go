@@ -60,3 +60,44 @@ func mustReadByte(r io.Reader) (byte, error) {
 
 	return b, err
 }
+
+func WriteVInt(w io.Writer, n int64) (error) {
+	if n >= -112 && n <= 127 {
+		_, err := w.Write([]byte{byte(int8(n))})
+		return err
+	}
+
+	len := -112
+	if n < 0 {
+		n = n ^ -1
+		len = -120
+	}
+
+	tmp := n
+	for tmp != 0 {
+		tmp = tmp >> 8
+		len--
+	}
+
+	_, err := w.Write([]byte{byte(int8(len))})
+	if err != nil {
+		return err
+	}
+
+	if len < -120 {
+		len = -(len + 120)
+	} else {
+		len = -(len + 112)
+	}
+
+	for i := len; i != 0; i-- {
+		shiftbits := uint((i - 1) * 8)
+		mask := 0xFF << shiftbits
+		_, err := w.Write([]byte{byte(int8(i & mask) >> shiftbits)})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
