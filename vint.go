@@ -79,7 +79,7 @@ func WriteVInt(w io.Writer, n int64) (int, error) {
 		length--
 	}
 
-	lengthByte := byte(int8(length))
+	lengthByte := byte(length)
 
 	if length < -120 {
 		length = -(length + 120)
