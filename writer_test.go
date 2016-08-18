@@ -2,6 +2,7 @@ package sequencefile
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,11 +29,12 @@ var strings = []stringSpec{
 
 func TestWriteString(t *testing.T) {
 	for _, spec := range strings {
-		buf := new(bytes.Buffer)
-		w := NewWriter(buf)
-		_, err := w.writeString(spec.s)
-		assert.NoError(t, err, "WriteString should return successfully")
-		assert.Equal(t, spec.bytes, buf.Bytes())
+		t.Run(fmt.Sprintf("writing '%s'", spec.s), func(t *testing.T) {
+			buf := new(bytes.Buffer)
+			w := NewWriter(buf)
+			_, err := w.writeString(spec.s)
+			assert.NoError(t, err, "WriteString should return successfully")
+			assert.Equal(t, spec.bytes, buf.Bytes())
+		})
 	}
-
 }
