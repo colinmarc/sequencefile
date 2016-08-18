@@ -49,8 +49,9 @@ func TestVInt(t *testing.T) {
 
 		t.Run(fmt.Sprintf("write %d", spec.number), func(t *testing.T) {
 			buf := new(bytes.Buffer)
-			err := WriteVInt(buf, spec.number)
+			written, err := WriteVInt(buf, spec.number)
 			assert.NoError(t, err, "WriteVInt should return successfully")
+			assert.Equal(t, len(spec.bytes), written, "WriteVInt should return the number of bytes written")
 			assert.Equal(t, spec.bytes, buf.Bytes(), "WriteVInt should write the correct result")
 		})
 	}
