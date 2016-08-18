@@ -63,8 +63,7 @@ func mustReadByte(r io.Reader) (byte, error) {
 
 func WriteVInt(w io.Writer, n int64) (int, error) {
 	if n >= -112 && n <= 127 {
-		_, err := w.Write([]byte{byte(int8(n))})
-		return 1, err
+		return w.Write([]byte{byte(n)})
 	}
 
 	length := -112
@@ -92,6 +91,5 @@ func WriteVInt(w io.Writer, n int64) (int, error) {
 	for i := 1; i <= length; i++ {
 	    b[i] = byte(n >> uint(8 * (length - i)))
 	}
-	_, err := w.Write(b)
-	return length + 1, err
+	return w.Write(b)
 }
