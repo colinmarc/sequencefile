@@ -67,30 +67,30 @@ func WriteVInt(w io.Writer, n int64) error {
 		return err
 	}
 
-	len := -112
+	length := -112
 	if n < 0 {
 		n = n ^ -1
-		len = -120
+		length = -120
 	}
 
 	tmp := n
 	for tmp != 0 {
 		tmp = tmp >> 8
-		len--
+		length--
 	}
 
-	_, err := w.Write([]byte{byte(int8(len))})
+	_, err := w.Write([]byte{byte(int8(length))})
 	if err != nil {
 		return err
 	}
 
-	if len < -120 {
-		len = -(len + 120)
+	if length < -120 {
+		length = -(length + 120)
 	} else {
-		len = -(len + 112)
+		length = -(length + 112)
 	}
 
-	for idx := len; idx != 0; idx-- {
+	for idx := length; idx != 0; idx-- {
 		shiftbits := uint((idx - 1) * 8)
 		mask := int64(0xFF << shiftbits)
 		masked := n & mask
