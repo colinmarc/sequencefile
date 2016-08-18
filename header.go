@@ -1,6 +1,7 @@
 package sequencefile
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 )
@@ -151,4 +152,20 @@ func (r *Reader) readString() (string, error) {
 	}
 
 	return string(b), nil
+}
+
+func (w *Writer) writeString(s string) (int, error) {
+	length := int64(len(s))
+	buf := new(bytes.Buffer)
+	_, err := WriteVInt(buf, length)
+	if err != nil {
+		return 0, err
+	}
+
+	_, err = buf.Write([]byte(s))
+	if err != nil {
+		return 0, err
+	}
+
+	return w.writer.Write(buf.Bytes())
 }
