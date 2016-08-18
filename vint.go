@@ -72,7 +72,7 @@ func WriteVInt(w io.Writer, n int64) (int, error) {
 		length = -120
 	}
 
-	for i := n; i != 0; i >> 8 {
+	for i := n; i != 0; i >>= 8 {
 		length--
 	}
 
