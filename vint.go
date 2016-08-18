@@ -84,10 +84,10 @@ func WriteVInt(w io.Writer, n int64) (int, error) {
 		length = -(length + 112)
 	}
 
-	b := make([]byte, length + 1)
+	b := make([]byte, length+1)
 	b[0] = lengthByte
 	for i := 1; i <= length; i++ {
-	    b[i] = byte(n >> uint(8 * (length - i)))
+		b[i] = byte(n >> uint(8*(length-i)))
 	}
 	return w.Write(b)
 }
