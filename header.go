@@ -52,17 +52,19 @@ func (r *Reader) ReadHeader() error {
 	r.Header.KeyClassName = keyClassName
 	r.Header.ValueClassName = valueClassName
 
-	r.clear()
-	flags, err := r.consume(2)
+	valueCompression, err := r.readBoolean()
 	if err != nil {
 		return err
 	}
 
-	valueCompression := uint8(flags[0])
-	blockCompression := uint8(flags[1])
-	if blockCompression > 0 {
+	blockCompression, err := r.readBoolean()
+	if err != nil {
+		return err
+	}
+
+	if blockCompression {
 		r.Header.Compression = BlockCompression
-	} else if valueCompression > 0 {
+	} else if valueCompression {
 		r.Header.Compression = RecordCompression
 	} else {
 		r.Header.Compression = NoCompression
@@ -137,6 +139,29 @@ func (r *Reader) readMetadata() error {
 	return nil
 }
 
+func (r *Reader) readBoolean() (bool, error) {
+	r.clear()
+	flag, err := r.consume(1)
+	if err != nil {
+		return false, err
+	}
+	flagint := uint8(flag[0])
+
+	if flagint == 0 {
+		return false, nil
+	} else {
+		return true, nil
+	}
+}
+
+func (w *Writer) writeBoolean(flag bool) (int, error) {
+	if flag {
+		return w.writer.Write([]byte{0x01})
+	} else {
+		return w.writer.Write([]byte{0x00})
+	}
+}
+
 func (r *Reader) readString() (string, error) {
 	r.clear()
 	b, err := r.consume(1)
@@ -167,5 +192,5 @@ func (w *Writer) writeString(s string) (int, error) {
 		return 0, err
 	}
 
-	return w.writer.Write(buf.Bytes())
+	return w.Write(buf.Bytes())
 }
