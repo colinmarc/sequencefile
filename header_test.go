@@ -35,6 +35,24 @@ func TestWriteBool(t *testing.T) {
 	assert.NoError(t, err, "writeBoolean should be successful")
 }
 
+func TestWriteSyncMarker(t *testing.T) {
+	buf := new(bytes.Buffer)
+	w := NewWriter(buf)
+	assert.Nil(t, w.Header.SyncMarker, "SyncMarker starts off as nil")
+	written, err := w.writeSyncMarker()
+	assert.NoError(t, err, "writeSyncMarker should not error")
+	assert.Equal(t, SyncSize, len(buf.Bytes()), "writeSyncMarker should write SyncSize bytes")
+	assert.Equal(t, SyncSize, written, "writeSyncMarker should return the number of bytes it wrote")
+	assert.NotNil(t, w.Header.SyncMarker, "SyncMarker should no longer be nil")
+	syncMarker := make([]byte, SyncSize)
+	copy(syncMarker, w.Header.SyncMarker)
+
+	written, err = w.writeSyncMarker()
+	assert.NoError(t, err, "writeSyncMarker should not error")
+
+	assert.Equal(t, syncMarker, w.Header.SyncMarker, "SyncMarker should not change once it's been set")
+}
+
 type metadataSpec struct {
 	Name     string
 	Metadata map[string]string

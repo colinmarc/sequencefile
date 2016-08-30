@@ -2,6 +2,7 @@ package sequencefile
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/binary"
 	"fmt"
 )
@@ -108,18 +109,81 @@ func (r *Reader) ReadHeader() error {
 	return nil
 }
 
-// func (w *Writer) WriteHeader() (int, error) {
-//
-// 	// todo: err check all of these writes. I know. I KNOW.
-// 	w.writer.Write([]byte("SEQ6"))                      // magic number
-// 	w.writeString("org.apache.hadoop.io.BytesWritable") // keyclassname - hardcoded for POC
-// 	w.writeString("org.apache.hadoop.io.BytesWritable") // valueclassname - hardcoded for POC
-// 	w.writeBoolean(false)                               // valueCompression?
-// 	w.writeBoolean(false)                               // blockCompression?
-// 	// if valueCompression || blockCompression { w.writeString(compressioncodec) }
-// 	w.writeMetadata()
-// 	// w.writeSyncMarker()
-// }
+func (w *Writer) WriteHeader() (int, error) {
+	totalwritten := 0
+	var written int
+	var err error
+
+	written, err = w.writer.Write([]byte{0x53, 0x45, 0x51, 0x06}) // magic number
+	totalwritten += written
+	if err != nil {
+		return totalwritten, err
+	}
+
+	keyclassname := "org.apache.hadoop.io.BytesWritable" // TODO: make this configurable
+	written, err = w.writeString(keyclassname)
+	totalwritten += written
+	if err != nil {
+		return totalwritten, err
+	}
+
+	valueclassname := "org.apache.hadoop.io.BytesWritable" // TODO: make this configurable
+	written, err = w.writeString(valueclassname)
+	totalwritten += written
+	if err != nil {
+		return totalwritten, err
+	}
+
+	valuecompression := false // TODO: make this configurable
+	written, err = w.writeBoolean(valuecompression)
+	totalwritten += written
+	if err != nil {
+		return totalwritten, err
+	}
+
+	blockcompression := false // TODO: make this configurable
+	written, err = w.writeBoolean(blockcompression)
+	totalwritten += written
+	if err != nil {
+		return totalwritten, err
+	}
+
+	if valuecompression || blockcompression {
+		compressioncodec := "TODO"
+		written, err = w.writeString(compressioncodec)
+		totalwritten += written
+		if err != nil {
+			return totalwritten, err
+		}
+	}
+
+	written, err = w.writeMetadata()
+	totalwritten += written
+	if err != nil {
+		return totalwritten, err
+	}
+
+	written, err = w.writeSyncMarker()
+	totalwritten += written
+	if err != nil {
+		return totalwritten, err
+	}
+
+	return totalwritten, nil
+}
+
+func (w *Writer) writeSyncMarker() (int, error) {
+	if w.Header.SyncMarker == nil {
+		syncMarkerBytes := make([]byte, SyncSize)
+		_, err := rand.Read(syncMarkerBytes)
+		if err != nil {
+			return 0, err
+		}
+		w.Header.SyncMarker = syncMarkerBytes
+	}
+
+	return w.writer.Write(w.Header.SyncMarker)
+}
 
 func (r *Reader) readMetadata() error {
 	r.clear()

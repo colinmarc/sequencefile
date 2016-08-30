@@ -4,7 +4,6 @@ import "io"
 
 type Writer struct {
 	Header Header
-
 	writer io.Writer
 }
 
