@@ -16,7 +16,7 @@ type Header struct {
 	KeyClassName              string
 	ValueClassName            string
 	Metadata                  map[string]string
-	SyncMarker                string
+	SyncMarker                []byte
 }
 
 // ReadHeader parses the SequenceFile header from the input stream, and fills
@@ -101,7 +101,7 @@ func (r *Reader) ReadHeader() error {
 		return err
 	}
 
-	r.Header.SyncMarker = string(marker)
+	r.Header.SyncMarker = marker
 	r.syncMarkerBytes = make([]byte, SyncSize)
 	copy(r.syncMarkerBytes, marker)
 
