@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"sort"
 )
 
 // A Header represents the information contained in the header of the
@@ -228,14 +229,21 @@ func (w *Writer) writeMetadata() (int, error) {
 		return totalwritten, err
 	}
 
-	for k, v := range w.Header.Metadata {
-		written, err = w.writeString(k)
+	// enumerate and sort list of keys
+	keys := make([]string, 0, len(w.Header.Metadata))
+	for k, _ := range w.Header.Metadata {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		written, err = w.writeString(key)
 		totalwritten += written
 		if err != nil {
 			return totalwritten, err
 		}
 
-		written, err = w.writeString(v)
+		written, err = w.writeString(w.Header.Metadata[key])
 		totalwritten += written
 		if err != nil {
 			return totalwritten, err
