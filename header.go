@@ -108,6 +108,19 @@ func (r *Reader) ReadHeader() error {
 	return nil
 }
 
+// func (w *Writer) WriteHeader() (int, error) {
+//
+// 	// todo: err check all of these writes. I know. I KNOW.
+// 	w.writer.Write([]byte("SEQ6"))                      // magic number
+// 	w.writeString("org.apache.hadoop.io.BytesWritable") // keyclassname - hardcoded for POC
+// 	w.writeString("org.apache.hadoop.io.BytesWritable") // valueclassname - hardcoded for POC
+// 	w.writeBoolean(false)                               // valueCompression?
+// 	w.writeBoolean(false)                               // blockCompression?
+// 	// if valueCompression || blockCompression { w.writeString(compressioncodec) }
+// 	w.writeMetadata()
+// 	// w.writeSyncMarker()
+// }
+
 func (r *Reader) readMetadata() error {
 	r.clear()
 	b, err := r.consume(4)
@@ -137,6 +150,34 @@ func (r *Reader) readMetadata() error {
 
 	r.Header.Metadata = metadata
 	return nil
+}
+
+func (w *Writer) writeMetadata() (int, error) {
+	totalwritten := 0
+
+	length := len(w.Header.Metadata)
+	lengthbytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(lengthbytes, uint32(length))
+	written, err := w.writer.Write(lengthbytes)
+	totalwritten += written
+	if err != nil {
+		return totalwritten, err
+	}
+
+	for k, v := range w.Header.Metadata {
+		written, err = w.writeString(k)
+		totalwritten += written
+		if err != nil {
+			return totalwritten, err
+		}
+
+		written, err = w.writeString(v)
+		totalwritten += written
+		if err != nil {
+			return totalwritten, err
+		}
+	}
+	return totalwritten, nil
 }
 
 func (r *Reader) readBoolean() (bool, error) {
