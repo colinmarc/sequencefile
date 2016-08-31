@@ -106,3 +106,27 @@ func TestWriteMetadata(t *testing.T) {
 		})
 	}
 }
+
+func TestWriteThenReadHeader(t *testing.T) {
+	for _, spec := range testmetadatas {
+		t.Run(spec.Name, func(t *testing.T) {
+			buf := new(bytes.Buffer)
+			writer := NewWriter(buf)
+
+			writer.Header.Metadata = spec.Metadata
+			written, err := writer.WriteHeader()
+			assert.NoError(t, err, "it should write successfully")
+			assert.Equal(t, len(buf.Bytes()), written, "it should return the number of bytes it wrote")
+
+			written, err = buf.Write([]byte("trailing junk"))
+			assert.NoError(t, err, "trailing junk should write successfully")
+
+			r := NewReader(buf)
+			err = r.ReadHeader()
+			assert.NoError(t, err, "it should read successfully")
+			assert.Equal(t, writer.Header, r.Header, "it should read back the same header as it wrote")
+
+			assert.Equal(t, []byte("trailing junk"), buf.Bytes(), "it should have read the full header and only the full header")
+		})
+	}
+}

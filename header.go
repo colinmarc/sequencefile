@@ -115,43 +115,46 @@ func (w *Writer) WriteHeader() (int, error) {
 	var written int
 	var err error
 
-	written, err = w.writer.Write([]byte{0x53, 0x45, 0x51, 0x06}) // magic number
+	w.Header.Version = 6 // TODO: move this to NewWriter
+	magic := make([]byte, 0, 4)
+	magic = append(magic, []byte("SEQ")...)
+	magic = append(magic, byte(w.Header.Version))
+	written, err = w.writer.Write(magic)
 	totalwritten += written
 	if err != nil {
 		return totalwritten, err
 	}
 
-	keyclassname := "org.apache.hadoop.io.BytesWritable" // TODO: make this configurable
-	written, err = w.writeString(keyclassname)
+	w.Header.KeyClassName = "org.apache.hadoop.io.BytesWritable" // TODO: make this configurable / move it to NewWriter
+	written, err = w.writeString(w.Header.KeyClassName)
 	totalwritten += written
 	if err != nil {
 		return totalwritten, err
 	}
 
-	valueclassname := "org.apache.hadoop.io.BytesWritable" // TODO: make this configurable
-	written, err = w.writeString(valueclassname)
+	w.Header.ValueClassName = "org.apache.hadoop.io.BytesWritable" // TODO: make this configurable / move it to NewWriter
+	written, err = w.writeString(w.Header.ValueClassName)
 	totalwritten += written
 	if err != nil {
 		return totalwritten, err
 	}
 
-	valuecompression := false // TODO: make this configurable
-	written, err = w.writeBoolean(valuecompression)
+	// TODO: compression bits, should be fun!
+	w.Header.Compression = NoCompression // TODO: make this configurable / move it to NewWriter
+	written, err = w.writeBoolean(w.Header.Compression == RecordCompression)
 	totalwritten += written
 	if err != nil {
 		return totalwritten, err
 	}
 
-	blockcompression := false // TODO: make this configurable
-	written, err = w.writeBoolean(blockcompression)
+	written, err = w.writeBoolean(w.Header.Compression == BlockCompression)
 	totalwritten += written
 	if err != nil {
 		return totalwritten, err
 	}
 
-	if valuecompression || blockcompression {
-		compressioncodec := "TODO"
-		written, err = w.writeString(compressioncodec)
+	if w.Header.Compression != NoCompression {
+		written, err = w.writeString("org.apache.hadoop.io.compress.GzipCodec")
 		totalwritten += written
 		if err != nil {
 			return totalwritten, err
@@ -229,7 +232,6 @@ func (w *Writer) writeMetadata() (int, error) {
 		return totalwritten, err
 	}
 
-	// enumerate and sort list of keys
 	keys := make([]string, 0, len(w.Header.Metadata))
 	for k, _ := range w.Header.Metadata {
 		keys = append(keys, k)
