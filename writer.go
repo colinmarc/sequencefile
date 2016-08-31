@@ -8,7 +8,13 @@ type Writer struct {
 }
 
 func NewWriter(w io.Writer) *Writer {
-	return &Writer{writer: w}
+	header := Header{
+		Version:        6,
+		KeyClassName:   "org.apache.hadoop.io.BytesWritable",
+		ValueClassName: "org.apache.hadoop.io.BytesWritable",
+		Compression:    NoCompression,
+	}
+	return &Writer{writer: w, Header: header}
 }
 
 func (w *Writer) Write(bytes []byte) (int, error) {

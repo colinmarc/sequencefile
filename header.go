@@ -80,9 +80,9 @@ func (r *Reader) ReadHeader() error {
 
 		r.Header.CompressionCodecClassName = compressionCodecClassName
 		switch r.Header.CompressionCodecClassName {
-		case "org.apache.hadoop.io.compress.GzipCodec":
+		case GzipClassName:
 			r.Header.CompressionCodec = GzipCompression
-		case "org.apache.hadoop.io.compress.SnappyCodec":
+		case SnappyClassName:
 			r.Header.CompressionCodec = SnappyCompression
 		default:
 			return fmt.Errorf("sequencefile: unsupported compression codec: %s", r.Header.CompressionCodecClassName)
@@ -115,7 +115,6 @@ func (w *Writer) WriteHeader() (int, error) {
 	var written int
 	var err error
 
-	w.Header.Version = 6 // TODO: move this to NewWriter
 	magic := make([]byte, 0, 4)
 	magic = append(magic, []byte("SEQ")...)
 	magic = append(magic, byte(w.Header.Version))
@@ -125,22 +124,18 @@ func (w *Writer) WriteHeader() (int, error) {
 		return totalwritten, err
 	}
 
-	w.Header.KeyClassName = "org.apache.hadoop.io.BytesWritable" // TODO: make this configurable / move it to NewWriter
 	written, err = w.writeString(w.Header.KeyClassName)
 	totalwritten += written
 	if err != nil {
 		return totalwritten, err
 	}
 
-	w.Header.ValueClassName = "org.apache.hadoop.io.BytesWritable" // TODO: make this configurable / move it to NewWriter
 	written, err = w.writeString(w.Header.ValueClassName)
 	totalwritten += written
 	if err != nil {
 		return totalwritten, err
 	}
 
-	// TODO: compression bits, should be fun!
-	w.Header.Compression = NoCompression // TODO: make this configurable / move it to NewWriter
 	written, err = w.writeBoolean(w.Header.Compression == RecordCompression)
 	totalwritten += written
 	if err != nil {
@@ -154,7 +149,14 @@ func (w *Writer) WriteHeader() (int, error) {
 	}
 
 	if w.Header.Compression != NoCompression {
-		written, err = w.writeString("org.apache.hadoop.io.compress.GzipCodec")
+		switch w.Header.CompressionCodec {
+		case GzipCompression:
+			w.Header.CompressionCodecClassName = GzipClassName
+		case SnappyCompression:
+			w.Header.CompressionCodecClassName = SnappyClassName
+		}
+
+		written, err = w.writeString(w.Header.CompressionCodecClassName)
 		totalwritten += written
 		if err != nil {
 			return totalwritten, err
