@@ -237,6 +237,7 @@ func (r *Reader) getDecompressor(src io.Reader) (io.Reader, error) {
 	if r.decompressor != nil {
 		err = r.decompressor.Reset(src)
 	} else {
+		// TODO: DRY this out along with other COMPRESSION
 		switch r.codec {
 		case GzipCompression:
 			r.decompressor, err = gzip.NewReader(src)

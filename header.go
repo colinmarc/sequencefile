@@ -78,6 +78,7 @@ func (r *Reader) ReadHeader() error {
 			return err
 		}
 
+		// TODO: DRY this out along with other COMPRESSION
 		r.Header.CompressionCodecClassName = compressionCodecClassName
 		switch r.Header.CompressionCodecClassName {
 		case GzipClassName:
@@ -148,6 +149,7 @@ func (w *Writer) WriteHeader() (int, error) {
 		return totalwritten, err
 	}
 
+	// TODO: DRY this out along with other COMPRESSION
 	if w.Header.Compression != NoCompression {
 		switch w.Header.CompressionCodec {
 		case GzipCompression:
