@@ -18,6 +18,13 @@ func BytesWritable(b []byte) []byte {
 	return b[4:]
 }
 
+func PutBytesWritable(raw []byte) []byte {
+	serialized := make([]byte, 4, 4+len(raw))
+	binary.BigEndian.PutUint32(serialized, uint32(len(raw)))
+	serialized = append(serialized, raw...)
+	return serialized
+}
+
 // Text unwraps a Text and returns the deserialized string.
 func Text(b []byte) string {
 	buf := bytes.NewBuffer(b)

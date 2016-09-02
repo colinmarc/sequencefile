@@ -60,20 +60,11 @@ func (w *Writer) Append(key []byte, value []byte) (int, error) {
 		return totalwritten, err
 	}
 
-	// TODO: make a function to take bytes -> byteswritable
-	keybyteswritable := make([]byte, 4, 4+len(key))
-	binary.BigEndian.PutUint32(keybyteswritable, uint32(len(key)))
-	keybyteswritable = append(keybyteswritable, key...)
-
-	keylength := len(keybyteswritable)
+	keylength := len(key)
 	keylengthbytes := make([]byte, 4)
 	binary.BigEndian.PutUint32(keylengthbytes, uint32(keylength))
 
-	valuebyteswritable := make([]byte, 4, 4+len(value))
-	binary.BigEndian.PutUint32(valuebyteswritable, uint32(len(value)))
-	valuebyteswritable = append(valuebyteswritable, value...)
-
-	recordlength := keylength + len(valuebyteswritable)
+	recordlength := keylength + len(value)
 	recordlengthbytes := make([]byte, 4)
 	binary.BigEndian.PutUint32(recordlengthbytes, uint32(recordlength))
 
@@ -89,13 +80,13 @@ func (w *Writer) Append(key []byte, value []byte) (int, error) {
 		return totalwritten, err
 	}
 
-	written, err = w.writer.Write(keybyteswritable)
+	written, err = w.writer.Write(key)
 	totalwritten += written
 	if err != nil {
 		return totalwritten, err
 	}
 
-	written, err = w.writer.Write(valuebyteswritable)
+	written, err = w.writer.Write(value)
 	totalwritten += written
 	if err != nil {
 		return totalwritten, err

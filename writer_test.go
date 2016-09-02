@@ -39,27 +39,6 @@ func TestWriteString(t *testing.T) {
 	}
 }
 
-func TestWriteKeyValue(t *testing.T) {
-	buf := new(bytes.Buffer)
-	writer := NewWriter(buf)
-
-	_, err := writer.WriteHeader()
-	assert.NoError(t, err, "Header should be written successfully")
-
-	buf.Reset() // so we can test the actual contents written out
-	written, err := writer.Append([]byte("foo"), []byte("bar"))
-	assert.NoError(t, err, "key/value should successfully append")
-	assert.Equal(t, 22, written, "it should write the correct number of bytes")
-
-	expected := []byte{
-		0x00, 0x00, 0x00, 0x0e, // recordlength
-		0x00, 0x00, 0x00, 0x07, // keylength
-		0x00, 0x00, 0x00, 0x03, 0x66, 0x6f, 0x6f, // key
-		0x00, 0x00, 0x00, 0x03, 0x62, 0x61, 0x72, // value
-	}
-	assert.Equal(t, expected, buf.Bytes(), "it should write out the correct sequence")
-}
-
 func TestWriteFullSequenceFile(t *testing.T) {
 	buf := new(bytes.Buffer)
 	writer := NewWriter(buf)
@@ -67,7 +46,7 @@ func TestWriteFullSequenceFile(t *testing.T) {
 	_, err := writer.WriteHeader()
 	assert.NoError(t, err, "Header should be written successfully")
 
-	written, err := writer.Append([]byte("foo"), []byte("bar"))
+	written, err := writer.Append(PutBytesWritable([]byte("foo")), PutBytesWritable([]byte("bar")))
 	assert.NoError(t, err, "key/value should successfully append")
 	assert.Equal(t, 22, written, "it should write the correct number of bytes")
 
