@@ -2,7 +2,6 @@ package sequencefile
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"sort"
@@ -178,19 +177,6 @@ func (w *Writer) WriteHeader() (int, error) {
 	}
 
 	return totalwritten, nil
-}
-
-func (w *Writer) writeSyncMarker() (int, error) {
-	if w.Header.SyncMarker == nil {
-		syncMarkerBytes := make([]byte, SyncSize)
-		_, err := rand.Read(syncMarkerBytes)
-		if err != nil {
-			return 0, err
-		}
-		w.Header.SyncMarker = syncMarkerBytes
-	}
-
-	return w.writer.Write(w.Header.SyncMarker)
 }
 
 func (r *Reader) readMetadata() error {
