@@ -50,6 +50,10 @@ func TestWriteFullSequenceFile(t *testing.T) {
 	assert.NoError(t, err, "key/value should successfully append")
 	assert.Equal(t, 22, written, "it should write the correct number of bytes")
 
+	written, err = writer.Append(PutBytesWritable([]byte("foo1")), PutBytesWritable([]byte("bar1")))
+	assert.NoError(t, err, "key/value should successfully append")
+	assert.Equal(t, 24, written, "it should write the correct number of bytes")
+
 	reader := NewReader(buf)
 	err = reader.ReadHeader()
 	assert.NoError(t, err, "should successfully read the header")
@@ -57,4 +61,11 @@ func TestWriteFullSequenceFile(t *testing.T) {
 	assert.True(t, success, "we successfully read a key/value pair")
 	assert.Equal(t, []byte("foo"), BytesWritable(reader.Key()), "we read the correct key")
 	assert.Equal(t, []byte("bar"), BytesWritable(reader.Value()), "we read the correct value")
+
+	success = reader.Scan()
+	assert.True(t, success, "we successfully read a key/value pair")
+	assert.Equal(t, []byte("foo1"), BytesWritable(reader.Key()), "we read the correct key")
+	assert.Equal(t, []byte("bar1"), BytesWritable(reader.Value()), "we read the correct value")
+
+	assert.Equal(t, []byte{}, buf.Bytes(), "there should be nothing left in the buffer")
 }
