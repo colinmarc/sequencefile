@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/golang/snappy"
@@ -21,7 +22,7 @@ type stringSpec struct {
 	bytes []byte
 }
 
-var strings = []stringSpec{
+var stringspecs = []stringSpec{
 	{"", []byte{0x00}},
 	{"foo", []byte{0x03, 0x66, 0x6f, 0x6f}},
 	{"the quick brown fox jumped over the lazy dog", []byte{0x2c, 0x74, 0x68, 0x65, 0x20, 0x71, 0x75, 0x69,
@@ -32,7 +33,7 @@ var strings = []stringSpec{
 }
 
 func TestWriteString(t *testing.T) {
-	for _, spec := range strings {
+	for _, spec := range stringspecs {
 		t.Run(fmt.Sprintf("writing '%s'", spec.s), func(t *testing.T) {
 			buf := new(bytes.Buffer)
 			w := NewWriter(buf)
@@ -132,6 +133,10 @@ func TestWriteRecordCompressedSnappy(t *testing.T) {
 	_, err = writer.Append(PutBytesWritable([]byte("randombytes")), PutBytesWritable(randbytes))
 	assert.NoError(t, err, "key/value should successfully append")
 
+	longstring := []byte(strings.Repeat("a", 1024*256+42))
+	_, err = writer.Append(PutBytesWritable([]byte("longstring")), PutBytesWritable(longstring))
+	assert.NoError(t, err, "key/value should successfully append")
+
 	reader := NewReader(buf)
 	err = reader.ReadHeader()
 	assert.NoError(t, err, "should successfully read the header")
@@ -150,6 +155,11 @@ func TestWriteRecordCompressedSnappy(t *testing.T) {
 	assert.True(t, success, "we successfully read a key/value pair")
 	assert.Equal(t, []byte("randombytes"), BytesWritable(reader.Key()), "we read the correct key")
 	assert.Equal(t, randbytes, BytesWritable(reader.Value()), "we read the correct value")
+
+	success = reader.Scan()
+	assert.True(t, success, "we successfully read a key/value pair")
+	assert.Equal(t, []byte("longstring"), BytesWritable(reader.Key()), "we read the correct key")
+	assert.Equal(t, longstring, BytesWritable(reader.Value()), "we read the correct value")
 
 	assert.Equal(t, []byte{}, buf.Bytes(), "there should be nothing left in the buffer")
 
