@@ -232,7 +232,7 @@ func (r *Reader) clear() {
 	r.buf.Reset()
 }
 
-func (r *Reader) getDecompressor(src io.Reader) (io.Reader, error) {
+func (r *Reader) getDecompressor(src io.Reader) (decompressor, error) {
 	var err error
 	if r.decompressor != nil {
 		err = r.decompressor.Reset(src)
