@@ -12,6 +12,8 @@ const (
 
 	GzipClassName   = "org.apache.hadoop.io.compress.GzipCodec"
 	SnappyClassName = "org.apache.hadoop.io.compress.SnappyCodec"
+
+	SnappyBlockSize = 128 * 1024
 )
 
 const (
@@ -28,5 +30,11 @@ const (
 type decompressor interface {
 	Read(p []byte) (n int, err error)
 	Reset(r io.Reader) error
+	Close() error
+}
+
+type compressor interface {
+	Write(p []byte) (n int, err error)
+	Reset(w io.Writer)
 	Close() error
 }
