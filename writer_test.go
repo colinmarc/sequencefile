@@ -3,12 +3,9 @@ package sequencefile
 import (
 	"bytes"
 	"crypto/rand"
-	"encoding/binary"
 	"fmt"
 	"strings"
 	"testing"
-
-	"github.com/golang/snappy"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -44,174 +41,128 @@ func TestWriteString(t *testing.T) {
 	}
 }
 
-// TODO: fullSequenceFileSpec + randomly generated keys/values
-func TestWriteFullSequenceFile(t *testing.T) {
-	buf := new(bytes.Buffer)
-	writer := NewWriter(buf)
-
-	_, err := writer.WriteHeader()
-	assert.NoError(t, err, "Header should be written successfully")
-
-	written, err := writer.Append(PutBytesWritable([]byte("foo")), PutBytesWritable([]byte("bar")))
-	assert.NoError(t, err, "key/value should successfully append")
-	assert.Equal(t, 22, written, "it should write the correct number of bytes")
-
-	written, err = writer.Append(PutBytesWritable([]byte("foo1")), PutBytesWritable([]byte("bar1")))
-	assert.NoError(t, err, "key/value should successfully append")
-	assert.Equal(t, 24, written, "it should write the correct number of bytes")
-
-	reader := NewReader(buf)
-	err = reader.ReadHeader()
-	assert.NoError(t, err, "should successfully read the header")
-	success := reader.Scan()
-	assert.True(t, success, "we successfully read a key/value pair")
-	assert.Equal(t, []byte("foo"), BytesWritable(reader.Key()), "we read the correct key")
-	assert.Equal(t, []byte("bar"), BytesWritable(reader.Value()), "we read the correct value")
-
-	success = reader.Scan()
-	assert.True(t, success, "we successfully read a key/value pair")
-	assert.Equal(t, []byte("foo1"), BytesWritable(reader.Key()), "we read the correct key")
-	assert.Equal(t, []byte("bar1"), BytesWritable(reader.Value()), "we read the correct value")
-
-	assert.Equal(t, []byte{}, buf.Bytes(), "there should be nothing left in the buffer")
+type testCompressionSpec struct {
+	SpecName                  string
+	Compression               Compression
+	CompressionCodec          CompressionCodec
+	CompressionCodecClassName string
 }
 
-func TestWriteRecordCompressedGzip(t *testing.T) {
-	buf := new(bytes.Buffer)
-	writer := NewWriter(buf)
-	writer.Header.Compression = RecordCompression
-	writer.Header.CompressionCodec = GzipCompression
-
-	_, err := writer.WriteHeader()
-	assert.NoError(t, err, "Header should be written successfully")
-
-	written, err := writer.Append(PutBytesWritable([]byte("foo")), PutBytesWritable([]byte("bar")))
-	assert.NoError(t, err, "key/value should successfully append")
-	t.Logf("wrote (foo, bar): %d bytes", written)
-
-	written, err = writer.Append(PutBytesWritable([]byte("foo1")), PutBytesWritable([]byte("bar1")))
-	assert.NoError(t, err, "key/value should successfully append")
-	t.Logf("wrote (foo1, bar1): %d bytes", written)
-
-	reader := NewReader(buf)
-	err = reader.ReadHeader()
-	assert.NoError(t, err, "should successfully read the header")
-	success := reader.Scan()
-	assert.True(t, success, "we successfully read a key/value pair")
-	assert.Equal(t, []byte("foo"), BytesWritable(reader.Key()), "we read the correct key")
-	assert.Equal(t, []byte("bar"), BytesWritable(reader.Value()), "we read the correct value")
-
-	success = reader.Scan()
-	assert.True(t, success, "we successfully read a key/value pair")
-	assert.Equal(t, []byte("foo1"), BytesWritable(reader.Key()), "we read the correct key")
-	assert.Equal(t, []byte("bar1"), BytesWritable(reader.Value()), "we read the correct value")
-
-	assert.Equal(t, []byte{}, buf.Bytes(), "there should be nothing left in the buffer")
-
+var testcompressionspecs = []testCompressionSpec{
+	{
+		SpecName:                  "NoCompression",
+		Compression:               NoCompression,
+		CompressionCodec:          SnappyCompression,
+		CompressionCodecClassName: SnappyClassName,
+	},
+	// blockcompression is not yet implemented
+	// {
+	// 	SpecName:                  "BlockCompression with SnappyCompression",
+	// 	Compression:               BlockCompression,
+	// 	CompressionCodec:          SnappyCompression,
+	// 	CompressionCodecClassName: SnappyClassName,
+	// },
+	{
+		SpecName:                  "RecordCompression with SnappyCompression",
+		Compression:               RecordCompression,
+		CompressionCodec:          SnappyCompression,
+		CompressionCodecClassName: SnappyClassName,
+	},
+	// blockcompression is not yet implemented
+	// {
+	// 	SpecName:                  "BlockCompression with GzipCompression",
+	// 	Compression:               BlockCompression,
+	// 	CompressionCodec:          GzipCompression,
+	// 	CompressionCodecClassName: GzipClassName,
+	// },
+	{
+		SpecName:                  "RecordCompression with GzipCompression",
+		Compression:               RecordCompression,
+		CompressionCodec:          GzipCompression,
+		CompressionCodecClassName: GzipClassName,
+	},
 }
 
-func TestWriteRecordCompressedSnappy(t *testing.T) {
-	buf := new(bytes.Buffer)
-	writer := NewWriter(buf)
-	writer.Header.Compression = RecordCompression
-	writer.Header.CompressionCodec = SnappyCompression
+func TestWriteHeaderCompression(t *testing.T) {
+	for _, spec := range testcompressionspecs {
+		t.Run(spec.SpecName, func(t *testing.T) {
+			buf := new(bytes.Buffer)
+			writer := NewWriter(buf)
 
-	_, err := writer.WriteHeader()
-	assert.NoError(t, err, "Header should be written successfully")
+			writer.Header.Compression = spec.Compression
+			writer.Header.CompressionCodec = spec.CompressionCodec
 
-	_, err = writer.Append(PutBytesWritable([]byte("foo")), PutBytesWritable([]byte("bar")))
-	assert.NoError(t, err, "key/value should successfully append")
+			_, err := writer.WriteHeader()
+			assert.NoError(t, err, "it should write successfully")
 
-	_, err = writer.Append(PutBytesWritable([]byte("foo1")), PutBytesWritable([]byte("bar1")))
-	assert.NoError(t, err, "key/value should successfully append")
+			r := NewReader(buf)
+			err = r.ReadHeader()
+			assert.NoError(t, err, "it should read successfully")
 
-	randsize := 1024*256 + 68 // the +68 to make sure we're not landing on a chunk boundary
-	randbytes := make([]byte, randsize)
-	_, err = rand.Read(randbytes)
-	assert.NoError(t, err, "we should successfully fill the slice with random junk")
-
-	_, err = writer.Append(PutBytesWritable([]byte("randombytes")), PutBytesWritable(randbytes))
-	assert.NoError(t, err, "key/value should successfully append")
-
-	longstring := []byte(strings.Repeat("a", 1024*256+42))
-	_, err = writer.Append(PutBytesWritable([]byte("longstring")), PutBytesWritable(longstring))
-	assert.NoError(t, err, "key/value should successfully append")
-
-	reader := NewReader(buf)
-	err = reader.ReadHeader()
-	assert.NoError(t, err, "should successfully read the header")
-
-	success := reader.Scan()
-	assert.True(t, success, "we successfully read a key/value pair")
-	assert.Equal(t, []byte("foo"), BytesWritable(reader.Key()), "we read the correct key")
-	assert.Equal(t, []byte("bar"), BytesWritable(reader.Value()), "we read the correct value")
-
-	success = reader.Scan()
-	assert.True(t, success, "we successfully read a key/value pair")
-	assert.Equal(t, []byte("foo1"), BytesWritable(reader.Key()), "we read the correct key")
-	assert.Equal(t, []byte("bar1"), BytesWritable(reader.Value()), "we read the correct value")
-
-	success = reader.Scan()
-	assert.True(t, success, "we successfully read a key/value pair")
-	assert.Equal(t, []byte("randombytes"), BytesWritable(reader.Key()), "we read the correct key")
-	assert.Equal(t, randbytes, BytesWritable(reader.Value()), "we read the correct value")
-
-	success = reader.Scan()
-	assert.True(t, success, "we successfully read a key/value pair")
-	assert.Equal(t, []byte("longstring"), BytesWritable(reader.Key()), "we read the correct key")
-	assert.Equal(t, longstring, BytesWritable(reader.Value()), "we read the correct value")
-
-	assert.Equal(t, []byte{}, buf.Bytes(), "there should be nothing left in the buffer")
-
+			assert.Equal(t, spec.Compression, r.Header.Compression, "it should have the correct compression type")
+			if spec.Compression != NoCompression {
+				assert.Equal(t, spec.CompressionCodecClassName, r.Header.CompressionCodecClassName, "it should have the correct compression codec class name")
+				assert.Equal(t, spec.CompressionCodec, r.Header.CompressionCodec, "it should have the correct compression codec")
+			}
+		})
+	}
 }
 
-func TestDoIUnderstandSnappy(t *testing.T) {
-	var err error
-	key := PutBytesWritable([]byte("foo1"))
-	value := PutBytesWritable([]byte("bar1"))
-	buf := new(bytes.Buffer)
+func TestWriteFullSequenceFiles(t *testing.T) {
+	for _, spec := range testcompressionspecs {
+		t.Run(spec.SpecName, func(t *testing.T) {
+			buf := new(bytes.Buffer)
+			writer := NewWriter(buf)
+			writer.Header.Compression = spec.Compression
+			writer.Header.CompressionCodec = spec.CompressionCodec
 
-	value_snappy_frame := snappy.Encode(nil, value)
-	value_snappy_frame_size := uint32(len(value_snappy_frame))
-	value_snappy_frame_size_bytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(value_snappy_frame_size_bytes, value_snappy_frame_size)
+			_, err := writer.WriteHeader()
+			assert.NoError(t, err, "Header should be written successfully")
 
-	value_decompressed_size := uint32(8791328)
-	value_decompressed_size_bytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(value_decompressed_size_bytes, value_decompressed_size)
+			_, err = writer.Append(PutBytesWritable([]byte("foo")), PutBytesWritable([]byte("bar")))
+			assert.NoError(t, err, "key/value should successfully append")
 
-	framed_value_snappy_bytes := make([]byte, 0, value_snappy_frame_size+8)
-	framed_value_snappy_bytes = append(framed_value_snappy_bytes, value_decompressed_size_bytes...)
-	framed_value_snappy_bytes = append(framed_value_snappy_bytes, value_snappy_frame_size_bytes...)
-	framed_value_snappy_bytes = append(framed_value_snappy_bytes, value_snappy_frame...) // this is the full "value" bytes for the record.
-	framed_value_snappy_bytes_len := uint32(len(framed_value_snappy_bytes))
+			_, err = writer.Append(PutBytesWritable([]byte("foo1")), PutBytesWritable([]byte("bar1")))
+			assert.NoError(t, err, "key/value should successfully append")
 
-	key_size := uint32(len(key))
-	key_size_bytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(key_size_bytes, key_size)
+			randsize := 1024*256 + 68 // the +68 to make sure we're not landing on a chunk boundary
+			randbytes := make([]byte, randsize)
+			_, err = rand.Read(randbytes)
+			assert.NoError(t, err, "we should successfully fill the slice with random junk")
 
-	record_size := key_size + framed_value_snappy_bytes_len
-	record_size_bytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(record_size_bytes, record_size)
+			_, err = writer.Append(PutBytesWritable([]byte("randombytes")), PutBytesWritable(randbytes))
+			assert.NoError(t, err, "key/value should successfully append")
 
-	// write out record_size_bytes, key_size_bytes, key, framed_value_snappy_bytes
-	_, err = buf.Write(record_size_bytes)
-	assert.NoError(t, err, "writing record_size_bytes should not error")
-	_, err = buf.Write(key_size_bytes)
-	assert.NoError(t, err, "writing key_size_bytes should not error")
-	_, err = buf.Write(key)
-	assert.NoError(t, err, "writing key should not error")
-	_, err = buf.Write(framed_value_snappy_bytes)
-	assert.NoError(t, err, "writing the actual snappy frame wrapped fully whatever bytes should not error")
+			longstring := []byte(strings.Repeat("a", 1024*256+42))
+			_, err = writer.Append(PutBytesWritable([]byte("longstring")), PutBytesWritable(longstring))
+			assert.NoError(t, err, "key/value should successfully append")
 
-	//assert.Equal(t, []byte{}, buf.Bytes(), "just checking to see what is even in the bytes")
+			reader := NewReader(buf)
+			err = reader.ReadHeader()
+			assert.NoError(t, err, "should successfully read the header")
 
-	reader := NewReaderCompression(buf, RecordCompression, SnappyCompression)
-	ret := reader.Scan()
-	assert.True(t, ret, "scan should find a record")
-	assert.Equal(t, []byte("foo1"), BytesWritable(reader.Key()), "key should be foo1")
-	assert.Equal(t, []byte("bar1"), BytesWritable(reader.Value()), "value should be bar1")
+			success := reader.Scan()
+			assert.True(t, success, "we successfully read a key/value pair")
+			assert.Equal(t, []byte("foo"), BytesWritable(reader.Key()), "we read the correct key")
+			assert.Equal(t, []byte("bar"), BytesWritable(reader.Value()), "we read the correct value")
 
-	assert.Equal(t, []byte{}, buf.Bytes(), "the buffer should be empty now")
+			success = reader.Scan()
+			assert.True(t, success, "we successfully read a key/value pair")
+			assert.Equal(t, []byte("foo1"), BytesWritable(reader.Key()), "we read the correct key")
+			assert.Equal(t, []byte("bar1"), BytesWritable(reader.Value()), "we read the correct value")
 
+			success = reader.Scan()
+			assert.True(t, success, "we successfully read a key/value pair")
+			assert.Equal(t, []byte("randombytes"), BytesWritable(reader.Key()), "we read the correct key")
+			assert.Equal(t, randbytes, BytesWritable(reader.Value()), "we read the correct value")
+
+			success = reader.Scan()
+			assert.True(t, success, "we successfully read a key/value pair")
+			assert.Equal(t, []byte("longstring"), BytesWritable(reader.Key()), "we read the correct key")
+			assert.Equal(t, longstring, BytesWritable(reader.Value()), "we read the correct value")
+
+			assert.Equal(t, []byte{}, buf.Bytes(), "there should be nothing left in the buffer")
+
+		})
+	}
 }
