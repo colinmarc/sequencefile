@@ -45,10 +45,17 @@ func (w *Writer) writeSyncMarker() (int, error) {
 	return w.writer.Write(w.Header.SyncMarker)
 }
 
-// maybe
 func (w *Writer) sync() (int, error) {
-	if w.sinceLastSync > 1024 {
-		return w.writeSyncMarker()
+	if w.sinceLastSync > 1024*8 {
+		totalwritten := 0
+		written, err := w.writer.Write([]byte{0xff, 0xff, 0xff, 0xff})
+		totalwritten += written
+		if err != nil {
+			return totalwritten, err
+		}
+		written, err = w.writeSyncMarker()
+		totalwritten += written
+		return totalwritten, err
 	}
 	return 0, nil
 }
@@ -104,6 +111,7 @@ func (w *Writer) Append(key []byte, value []byte) (int, error) {
 		return totalwritten, err
 	}
 
+	w.sinceLastSync += totalwritten
 	return totalwritten, nil
 }
 
