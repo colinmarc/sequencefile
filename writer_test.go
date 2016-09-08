@@ -92,7 +92,7 @@ func TestWriteHeaderCompression(t *testing.T) {
 			writer.Header.Compression = spec.Compression
 			writer.Header.CompressionCodec = spec.CompressionCodec
 
-			_, err := writer.WriteHeader()
+			err := writer.WriteHeader()
 			assert.NoError(t, err, "it should write successfully")
 
 			r := NewReader(buf)
@@ -116,13 +116,13 @@ func TestWriteFullSequenceFiles(t *testing.T) {
 			writer.Header.Compression = spec.Compression
 			writer.Header.CompressionCodec = spec.CompressionCodec
 
-			_, err := writer.WriteHeader()
+			err := writer.WriteHeader()
 			assert.NoError(t, err, "Header should be written successfully")
 
-			_, err = writer.Append(PutBytesWritable([]byte("foo")), PutBytesWritable([]byte("bar")))
+			err = writer.Append(PutBytesWritable([]byte("foo")), PutBytesWritable([]byte("bar")))
 			assert.NoError(t, err, "key/value should successfully append")
 
-			_, err = writer.Append(PutBytesWritable([]byte("foo1")), PutBytesWritable([]byte("bar1")))
+			err = writer.Append(PutBytesWritable([]byte("foo1")), PutBytesWritable([]byte("bar1")))
 			assert.NoError(t, err, "key/value should successfully append")
 
 			randsize := 1024*256 + 68 // the +68 to make sure we're not landing on a chunk boundary
@@ -130,11 +130,11 @@ func TestWriteFullSequenceFiles(t *testing.T) {
 			_, err = rand.Read(randbytes)
 			assert.NoError(t, err, "we should successfully fill the slice with random junk")
 
-			_, err = writer.Append(PutBytesWritable([]byte("randombytes")), PutBytesWritable(randbytes))
+			err = writer.Append(PutBytesWritable([]byte("randombytes")), PutBytesWritable(randbytes))
 			assert.NoError(t, err, "key/value should successfully append")
 
 			longstring := []byte(strings.Repeat("a", 1024*256+42))
-			_, err = writer.Append(PutBytesWritable([]byte("longstring")), PutBytesWritable(longstring))
+			err = writer.Append(PutBytesWritable([]byte("longstring")), PutBytesWritable(longstring))
 			assert.NoError(t, err, "key/value should successfully append")
 
 			reader := NewReader(buf)

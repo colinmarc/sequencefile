@@ -114,11 +114,10 @@ func TestWriteThenReadHeader(t *testing.T) {
 			writer := NewWriter(buf)
 
 			writer.Header.Metadata = spec.Metadata
-			written, err := writer.WriteHeader()
+			err := writer.WriteHeader()
 			assert.NoError(t, err, "it should write successfully")
-			assert.Equal(t, len(buf.Bytes()), written, "it should return the number of bytes it wrote")
 
-			written, err = buf.Write([]byte("trailing junk"))
+			_, err = buf.Write([]byte("trailing junk"))
 			assert.NoError(t, err, "trailing junk should write successfully")
 
 			r := NewReader(buf)

@@ -27,10 +27,6 @@ func NewWriter(w io.Writer) *Writer {
 	return &Writer{writer: w, Header: header, sinceLastSync: 0}
 }
 
-func (w *Writer) Write(bytes []byte) (int, error) {
-	return w.writer.Write(bytes)
-}
-
 func (w *Writer) writeSyncMarker() (int, error) {
 	if w.Header.SyncMarker == nil {
 		syncMarkerBytes := make([]byte, SyncSize)
@@ -60,16 +56,24 @@ func (w *Writer) sync() (int, error) {
 	return 0, nil
 }
 
-func (w *Writer) Append(key []byte, value []byte) (int, error) {
-	// TODO: if we haven't written the header yet, should we error, or just silently write the header?
+func (w *Writer) Flush() error {
+	if w.Header.Compression == BlockCompression {
+		return w.flushBlock()
+	}
+
+	// we need a bufio.Writer underneath this first, though
+	// return w.writer.Flush()
+	return nil
+}
+
+func (w *Writer) Append(key []byte, value []byte) error {
+	totalwritten := 0
 	var written int
 	var err error
-	totalwritten := 0
 
-	written, err = w.sync()
-	totalwritten += written
+	_, err = w.sync()
 	if err != nil {
-		return totalwritten, err
+		return err
 	}
 
 	keylength := len(key)
@@ -79,7 +83,7 @@ func (w *Writer) Append(key []byte, value []byte) (int, error) {
 	if w.Header.Compression == RecordCompression {
 		value, err = w.compress(value)
 		if err != nil {
-			return totalwritten, err
+			return err
 		}
 	}
 
@@ -90,29 +94,29 @@ func (w *Writer) Append(key []byte, value []byte) (int, error) {
 	written, err = w.writer.Write(recordlengthbytes)
 	totalwritten += written
 	if err != nil {
-		return totalwritten, err
+		return err
 	}
 
 	written, err = w.writer.Write(keylengthbytes)
 	totalwritten += written
 	if err != nil {
-		return totalwritten, err
+		return err
 	}
 
 	written, err = w.writer.Write(key)
 	totalwritten += written
 	if err != nil {
-		return totalwritten, err
+		return err
 	}
 
 	written, err = w.writer.Write(value)
 	totalwritten += written
 	if err != nil {
-		return totalwritten, err
+		return err
 	}
 
 	w.sinceLastSync += totalwritten
-	return totalwritten, nil
+	return nil
 }
 
 func (w *Writer) compress(raw []byte) ([]byte, error) {
@@ -171,4 +175,8 @@ func (w *Writer) compressGzip(raw []byte) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+func (w *Writer) flushBlock() error {
+	return nil
 }
