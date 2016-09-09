@@ -54,5 +54,9 @@ func TestVInt(t *testing.T) {
 			assert.Equal(t, len(spec.bytes), written, "WriteVInt should return the number of bytes written")
 			assert.Equal(t, spec.bytes, buf.Bytes(), "WriteVInt should write the correct result")
 		})
+
+		t.Run(fmt.Sprintf("put %d", spec.number), func(t *testing.T) {
+			assert.Equal(t, spec.bytes, PutVInt(spec.number), "PutVInt should return the correct result")
+		})
 	}
 }
