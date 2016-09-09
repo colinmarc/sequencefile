@@ -15,6 +15,7 @@ type Writer struct {
 	writer        io.Writer
 	sinceLastSync int
 	compressor    compressor
+	blockWriter   blockWriter
 }
 
 func NewWriter(w io.Writer) *Writer {
@@ -42,7 +43,7 @@ func (w *Writer) writeSyncMarker() (int, error) {
 }
 
 func (w *Writer) sync() (int, error) {
-	if w.sinceLastSync > 1024*8 {
+	if w.Header.Compression == BlockCompression || w.sinceLastSync > 1024*8 {
 		totalwritten := 0
 		written, err := w.writer.Write([]byte{0xff, 0xff, 0xff, 0xff})
 		totalwritten += written
@@ -58,7 +59,9 @@ func (w *Writer) sync() (int, error) {
 
 func (w *Writer) Flush() error {
 	if w.Header.Compression == BlockCompression {
-		return w.flushBlock()
+		written, err := w.blockWriter.FlushBlock(w)
+		w.sinceLastSync += written
+		return err
 	}
 
 	// we need a bufio.Writer underneath this first, though
@@ -70,6 +73,14 @@ func (w *Writer) Append(key []byte, value []byte) error {
 	totalwritten := 0
 	var written int
 	var err error
+
+	if w.Header.Compression == BlockCompression {
+		w.blockWriter.Append(key, value)
+		if w.blockWriter.keysLength+w.blockWriter.valuesLength > BlockCompressionBlockSize {
+			return w.Flush()
+		}
+		return nil
+	}
 
 	_, err = w.sync()
 	if err != nil {
@@ -175,8 +186,4 @@ func (w *Writer) compressGzip(raw []byte) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
-}
-
-func (w *Writer) flushBlock() error {
-	return nil
 }

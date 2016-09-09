@@ -55,20 +55,18 @@ var testcompressionspecs = []testCompressionSpec{
 		CompressionCodec:          SnappyCompression,
 		CompressionCodecClassName: SnappyClassName,
 	},
-	// blockcompression is not yet implemented
-	// {
-	// 	SpecName:                  "BlockCompression with SnappyCompression",
-	// 	Compression:               BlockCompression,
-	// 	CompressionCodec:          SnappyCompression,
-	// 	CompressionCodecClassName: SnappyClassName,
-	// },
+	{
+		SpecName:                  "BlockCompression with SnappyCompression",
+		Compression:               BlockCompression,
+		CompressionCodec:          SnappyCompression,
+		CompressionCodecClassName: SnappyClassName,
+	},
 	{
 		SpecName:                  "RecordCompression with SnappyCompression",
 		Compression:               RecordCompression,
 		CompressionCodec:          SnappyCompression,
 		CompressionCodecClassName: SnappyClassName,
 	},
-	// blockcompression is not yet implemented
 	// {
 	// 	SpecName:                  "BlockCompression with GzipCompression",
 	// 	Compression:               BlockCompression,
@@ -115,14 +113,15 @@ func TestWriteFullSequenceFiles(t *testing.T) {
 			writer := NewWriter(buf)
 			writer.Header.Compression = spec.Compression
 			writer.Header.CompressionCodec = spec.CompressionCodec
+			writer.Header.SyncMarker = []byte{0xe3, 0xb0, 0x6, 0x12, 0x67, 0xd4, 0x3b, 0xe0, 0xf3, 0xa, 0x78, 0x78, 0xcf, 0x69, 0x29, 0x6e}
 
 			err := writer.WriteHeader()
 			assert.NoError(t, err, "Header should be written successfully")
 
-			err = writer.Append(PutBytesWritable([]byte("foo")), PutBytesWritable([]byte("bar")))
+			err = writer.Append(PutBytesWritable([]byte("Alice")), PutBytesWritable([]byte("Practice")))
 			assert.NoError(t, err, "key/value should successfully append")
 
-			err = writer.Append(PutBytesWritable([]byte("foo1")), PutBytesWritable([]byte("bar1")))
+			err = writer.Append(PutBytesWritable([]byte("Bob")), PutBytesWritable([]byte("Hope")))
 			assert.NoError(t, err, "key/value should successfully append")
 
 			randsize := 1024*256 + 68 // the +68 to make sure we're not landing on a chunk boundary
@@ -137,19 +136,25 @@ func TestWriteFullSequenceFiles(t *testing.T) {
 			err = writer.Append(PutBytesWritable([]byte("longstring")), PutBytesWritable(longstring))
 			assert.NoError(t, err, "key/value should successfully append")
 
+			err = writer.Flush()
+			assert.NoError(t, err, "flush should succeed")
+
 			reader := NewReader(buf)
 			err = reader.ReadHeader()
+
 			assert.NoError(t, err, "should successfully read the header")
+			assert.Equal(t, writer.Header.SyncMarker, reader.Header.SyncMarker, "sync marker read should be the same as sync marker written")
 
 			success := reader.Scan()
 			assert.True(t, success, "we successfully read a key/value pair")
-			assert.Equal(t, []byte("foo"), BytesWritable(reader.Key()), "we read the correct key")
-			assert.Equal(t, []byte("bar"), BytesWritable(reader.Value()), "we read the correct value")
+
+			assert.Equal(t, []byte("Alice"), BytesWritable(reader.Key()), "we read the correct key")
+			assert.Equal(t, []byte("Practice"), BytesWritable(reader.Value()), "we read the correct value")
 
 			success = reader.Scan()
 			assert.True(t, success, "we successfully read a key/value pair")
-			assert.Equal(t, []byte("foo1"), BytesWritable(reader.Key()), "we read the correct key")
-			assert.Equal(t, []byte("bar1"), BytesWritable(reader.Value()), "we read the correct value")
+			assert.Equal(t, []byte("Bob"), BytesWritable(reader.Key()), "we read the correct key")
+			assert.Equal(t, []byte("Hope"), BytesWritable(reader.Value()), "we read the correct value")
 
 			success = reader.Scan()
 			assert.True(t, success, "we successfully read a key/value pair")

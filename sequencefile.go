@@ -13,7 +13,8 @@ const (
 	GzipClassName   = "org.apache.hadoop.io.compress.GzipCodec"
 	SnappyClassName = "org.apache.hadoop.io.compress.SnappyCodec"
 
-	SnappyBlockSize = 128 * 1024
+	SnappyBlockSize           = 128 * 1024
+	BlockCompressionBlockSize = 128 * 1024
 )
 
 const (
