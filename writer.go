@@ -144,11 +144,8 @@ func (w *Writer) compress(raw []byte) ([]byte, error) {
 
 func (w *Writer) compressSnappy(raw []byte) ([]byte, error) {
 	rawlen := len(raw)
-	rawlenbytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(rawlenbytes, uint32(rawlen))
-
-	ret := make([]byte, 0, 4)
-	ret = append(ret, rawlenbytes...)
+	ret := make([]byte, 4)
+	binary.BigEndian.PutUint32(ret, uint32(rawlen))
 
 	var chunk []byte
 	for offset := 0; offset < rawlen; offset += SnappyBlockSize {
