@@ -25,7 +25,7 @@ func NewWriter(w io.Writer) *Writer {
 		ValueClassName: BytesWritableClassName,
 		Compression:    NoCompression,
 	}
-	return &Writer{writer: w, Header: header, sinceLastSync: 0}
+	return &Writer{writer: w, Header: header}
 }
 
 func (w *Writer) writeSyncMarker() (int, error) {
