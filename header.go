@@ -200,15 +200,15 @@ func (r *Reader) readMetadata() error {
 }
 
 func (w *Writer) writeMetadata() (int, error) {
-	totalwritten := 0
+	totalWritten := 0
 
 	length := len(w.Header.Metadata)
-	lengthbytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(lengthbytes, uint32(length))
-	written, err := w.writer.Write(lengthbytes)
-	totalwritten += written
+	lengthBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(lengthBytes, uint32(length))
+	written, err := w.writer.Write(lengthBytes)
+	totalWritten += written
 	if err != nil {
-		return totalwritten, err
+		return totalWritten, err
 	}
 
 	keys := make([]string, 0, len(w.Header.Metadata))
@@ -219,18 +219,18 @@ func (w *Writer) writeMetadata() (int, error) {
 
 	for _, key := range keys {
 		written, err = w.writeString(key)
-		totalwritten += written
+		totalWritten += written
 		if err != nil {
-			return totalwritten, err
+			return totalWritten, err
 		}
 
 		written, err = w.writeString(w.Header.Metadata[key])
-		totalwritten += written
+		totalWritten += written
 		if err != nil {
-			return totalwritten, err
+			return totalWritten, err
 		}
 	}
-	return totalwritten, nil
+	return totalWritten, nil
 }
 
 func (r *Reader) readBoolean() (bool, error) {

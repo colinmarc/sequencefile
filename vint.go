@@ -63,7 +63,7 @@ func mustReadByte(r io.Reader) (byte, error) {
 
 // WriteVInt writes an int64 encoded in hadoop's "VInt" format, described and
 // implemented here: https://goo.gl/1h4mrG. It does at most one write to the
-// underlying io.Writer
+// underlying io.Writer.
 func WriteVInt(w io.Writer, n int64) (int, error) {
 	return w.Write(PutVInt(n))
 }

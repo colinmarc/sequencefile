@@ -167,7 +167,7 @@ func (bw *blockWriter) Append(key []byte, value []byte) {
 func (bw *blockWriter) FlushBlock(w *Writer) (int, error) {
 	var err error
 	var written int
-	var totalwritten int
+	var totalWritten int
 	if len(bw.keys) == 0 {
 		return 0, nil
 	}
@@ -178,9 +178,9 @@ func (bw *blockWriter) FlushBlock(w *Writer) (int, error) {
 
 	// write out the number of key/value pairs in this block
 	written, err = WriteVInt(w.writer, int64(len(bw.keys)))
-	totalwritten += written
+	totalWritten += written
 	if err != nil {
-		return totalwritten, err
+		return totalWritten, err
 	}
 
 	// key lengths block
@@ -190,18 +190,18 @@ func (bw *blockWriter) FlushBlock(w *Writer) (int, error) {
 	}
 	keyLengthsBytesCompressed, err := w.compress(keyLengthsBytes)
 	if err != nil {
-		return totalwritten, err
+		return totalWritten, err
 	}
 
 	written, err = WriteVInt(w.writer, int64(len(keyLengthsBytesCompressed)))
-	totalwritten += written
+	totalWritten += written
 	if err != nil {
-		return totalwritten, err
+		return totalWritten, err
 	}
 	written, err = w.writer.Write(keyLengthsBytesCompressed)
-	totalwritten += written
+	totalWritten += written
 	if err != nil {
-		return totalwritten, err
+		return totalWritten, err
 	}
 
 	// keys block
@@ -211,18 +211,18 @@ func (bw *blockWriter) FlushBlock(w *Writer) (int, error) {
 	}
 	keysBytesCompressed, err := w.compress(keysBytes)
 	if err != nil {
-		return totalwritten, err
+		return totalWritten, err
 	}
 
 	written, err = WriteVInt(w.writer, int64(len(keysBytesCompressed)))
-	totalwritten += written
+	totalWritten += written
 	if err != nil {
-		return totalwritten, err
+		return totalWritten, err
 	}
 	written, err = w.writer.Write(keysBytesCompressed)
-	totalwritten += written
+	totalWritten += written
 	if err != nil {
-		return totalwritten, err
+		return totalWritten, err
 	}
 
 	// value length block
@@ -232,18 +232,18 @@ func (bw *blockWriter) FlushBlock(w *Writer) (int, error) {
 	}
 	valueLengthsBytesCompressed, err := w.compress(valueLengthsBytes)
 	if err != nil {
-		return totalwritten, err
+		return totalWritten, err
 	}
 
 	written, err = WriteVInt(w.writer, int64(len(valueLengthsBytesCompressed)))
-	totalwritten += written
+	totalWritten += written
 	if err != nil {
-		return totalwritten, err
+		return totalWritten, err
 	}
 	written, err = w.writer.Write(valueLengthsBytesCompressed)
-	totalwritten += written
+	totalWritten += written
 	if err != nil {
-		return totalwritten, err
+		return totalWritten, err
 	}
 
 	// values block
@@ -253,22 +253,22 @@ func (bw *blockWriter) FlushBlock(w *Writer) (int, error) {
 	}
 	valuesBytesCompressed, err := w.compress(valuesBytes)
 	if err != nil {
-		return totalwritten, err
+		return totalWritten, err
 	}
 
 	written, err = WriteVInt(w.writer, int64(len(valuesBytesCompressed)))
-	totalwritten += written
+	totalWritten += written
 	if err != nil {
-		return totalwritten, err
+		return totalWritten, err
 	}
 	written, err = w.writer.Write(valuesBytesCompressed)
-	totalwritten += written
+	totalWritten += written
 	if err != nil {
-		return totalwritten, err
+		return totalWritten, err
 	}
 
 	bw.Reset()
-	return totalwritten, nil
+	return totalWritten, nil
 }
 
 func (bw *blockWriter) Reset() {

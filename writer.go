@@ -21,8 +21,8 @@ type Writer struct {
 func NewWriter(w io.Writer) *Writer {
 	header := Header{
 		Version:        6,
-		KeyClassName:   "org.apache.hadoop.io.BytesWritable",
-		ValueClassName: "org.apache.hadoop.io.BytesWritable",
+		KeyClassName:   BytesWritableClassName,
+		ValueClassName: BytesWritableClassName,
 		Compression:    NoCompression,
 	}
 	return &Writer{writer: w, Header: header, sinceLastSync: 0}
@@ -44,16 +44,16 @@ func (w *Writer) writeSyncMarker() (int, error) {
 
 func (w *Writer) sync() (int, error) {
 	if w.Header.Compression == BlockCompression || w.sinceLastSync > 1024*8 {
-		totalwritten := 0
+		totalWritten := 0
 		written, err := w.writer.Write([]byte{0xff, 0xff, 0xff, 0xff})
-		totalwritten += written
+		totalWritten += written
 		if err != nil {
-			return totalwritten, err
+			return totalWritten, err
 		}
 		written, err = w.writeSyncMarker()
-		totalwritten += written
+		totalWritten += written
 
-		return totalwritten, err
+		return totalWritten, err
 	}
 	return 0, nil
 }
@@ -71,7 +71,7 @@ func (w *Writer) Flush() error {
 }
 
 func (w *Writer) Append(key []byte, value []byte) error {
-	totalwritten := 0
+	totalWritten := 0
 	var written int
 	var err error
 
@@ -88,9 +88,9 @@ func (w *Writer) Append(key []byte, value []byte) error {
 		return err
 	}
 
-	keylength := len(key)
-	keylengthbytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(keylengthbytes, uint32(keylength))
+	keyLength := len(key)
+	keyLengthBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(keyLengthBytes, uint32(keyLength))
 
 	if w.Header.Compression == RecordCompression {
 		value, err = w.compress(value)
@@ -99,35 +99,35 @@ func (w *Writer) Append(key []byte, value []byte) error {
 		}
 	}
 
-	recordlength := keylength + len(value)
-	recordlengthbytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(recordlengthbytes, uint32(recordlength))
+	recordlength := keyLength + len(value)
+	recordLengthBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(recordLengthBytes, uint32(recordlength))
 
-	written, err = w.writer.Write(recordlengthbytes)
-	totalwritten += written
+	written, err = w.writer.Write(recordLengthBytes)
+	totalWritten += written
 	if err != nil {
 		return err
 	}
 
-	written, err = w.writer.Write(keylengthbytes)
-	totalwritten += written
+	written, err = w.writer.Write(keyLengthBytes)
+	totalWritten += written
 	if err != nil {
 		return err
 	}
 
 	written, err = w.writer.Write(key)
-	totalwritten += written
+	totalWritten += written
 	if err != nil {
 		return err
 	}
 
 	written, err = w.writer.Write(value)
-	totalwritten += written
+	totalWritten += written
 	if err != nil {
 		return err
 	}
 
-	w.sinceLastSync += totalwritten
+	w.sinceLastSync += totalWritten
 	return nil
 }
 
