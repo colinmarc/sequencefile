@@ -29,6 +29,14 @@ func TestBytesWritable(t *testing.T) {
 	}
 }
 
+func TestPutBytesWritable(t *testing.T) {
+	for _, spec := range bytesWritables {
+		t.Run(string(spec.expected), func(t *testing.T) {
+			assert.Equal(t, spec.b, PutBytesWritable(spec.expected), "PutBytesWritable should wrap correctly")
+		})
+	}
+}
+
 var texts = []struct {
 	b        []byte
 	expected string

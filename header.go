@@ -1,8 +1,10 @@
 package sequencefile
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
+	"sort"
 )
 
 // A Header represents the information contained in the header of the
@@ -15,7 +17,7 @@ type Header struct {
 	KeyClassName              string
 	ValueClassName            string
 	Metadata                  map[string]string
-	SyncMarker                string
+	SyncMarker                []byte
 }
 
 // ReadHeader parses the SequenceFile header from the input stream, and fills
@@ -51,17 +53,19 @@ func (r *Reader) ReadHeader() error {
 	r.Header.KeyClassName = keyClassName
 	r.Header.ValueClassName = valueClassName
 
-	r.clear()
-	flags, err := r.consume(2)
+	valueCompression, err := r.readBoolean()
 	if err != nil {
 		return err
 	}
 
-	valueCompression := uint8(flags[0])
-	blockCompression := uint8(flags[1])
-	if blockCompression > 0 {
+	blockCompression, err := r.readBoolean()
+	if err != nil {
+		return err
+	}
+
+	if blockCompression {
 		r.Header.Compression = BlockCompression
-	} else if valueCompression > 0 {
+	} else if valueCompression {
 		r.Header.Compression = RecordCompression
 	} else {
 		r.Header.Compression = NoCompression
@@ -75,9 +79,9 @@ func (r *Reader) ReadHeader() error {
 
 		r.Header.CompressionCodecClassName = compressionCodecClassName
 		switch r.Header.CompressionCodecClassName {
-		case "org.apache.hadoop.io.compress.GzipCodec":
+		case GzipClassName:
 			r.Header.CompressionCodec = GzipCompression
-		case "org.apache.hadoop.io.compress.SnappyCodec":
+		case SnappyClassName:
 			r.Header.CompressionCodec = SnappyCompression
 		default:
 			return fmt.Errorf("sequencefile: unsupported compression codec: %s", r.Header.CompressionCodecClassName)
@@ -98,9 +102,68 @@ func (r *Reader) ReadHeader() error {
 		return err
 	}
 
-	r.Header.SyncMarker = string(marker)
+	r.Header.SyncMarker = make([]byte, SyncSize)
+	copy(r.Header.SyncMarker, marker)
 	r.syncMarkerBytes = make([]byte, SyncSize)
 	copy(r.syncMarkerBytes, marker)
+
+	return nil
+}
+
+func (w *Writer) WriteHeader() error {
+	var err error
+
+	magic := make([]byte, 0, 4)
+	magic = append(magic, []byte("SEQ")...)
+	magic = append(magic, byte(w.Header.Version))
+	_, err = w.writer.Write(magic)
+	if err != nil {
+		return err
+	}
+
+	_, err = w.writeString(w.Header.KeyClassName)
+	if err != nil {
+		return err
+	}
+
+	_, err = w.writeString(w.Header.ValueClassName)
+	if err != nil {
+		return err
+	}
+
+	_, err = w.writeBoolean(w.Header.Compression == RecordCompression)
+	if err != nil {
+		return err
+	}
+
+	_, err = w.writeBoolean(w.Header.Compression == BlockCompression)
+	if err != nil {
+		return err
+	}
+
+	if w.Header.Compression != NoCompression {
+		switch w.Header.CompressionCodec {
+		case GzipCompression:
+			w.Header.CompressionCodecClassName = GzipClassName
+		case SnappyCompression:
+			w.Header.CompressionCodecClassName = SnappyClassName
+		}
+
+		_, err = w.writeString(w.Header.CompressionCodecClassName)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = w.writeMetadata()
+	if err != nil {
+		return err
+	}
+
+	_, err = w.writeSyncMarker()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -136,6 +199,63 @@ func (r *Reader) readMetadata() error {
 	return nil
 }
 
+func (w *Writer) writeMetadata() (int, error) {
+	totalWritten := 0
+
+	length := len(w.Header.Metadata)
+	lengthBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(lengthBytes, uint32(length))
+	written, err := w.writer.Write(lengthBytes)
+	totalWritten += written
+	if err != nil {
+		return totalWritten, err
+	}
+
+	keys := make([]string, 0, len(w.Header.Metadata))
+	for k, _ := range w.Header.Metadata {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		written, err = w.writeString(key)
+		totalWritten += written
+		if err != nil {
+			return totalWritten, err
+		}
+
+		written, err = w.writeString(w.Header.Metadata[key])
+		totalWritten += written
+		if err != nil {
+			return totalWritten, err
+		}
+	}
+	return totalWritten, nil
+}
+
+func (r *Reader) readBoolean() (bool, error) {
+	r.clear()
+	flag, err := r.consume(1)
+	if err != nil {
+		return false, err
+	}
+	flagint := uint8(flag[0])
+
+	if flagint == 0 {
+		return false, nil
+	} else {
+		return true, nil
+	}
+}
+
+func (w *Writer) writeBoolean(flag bool) (int, error) {
+	if flag {
+		return w.writer.Write([]byte{0x01})
+	} else {
+		return w.writer.Write([]byte{0x00})
+	}
+}
+
 func (r *Reader) readString() (string, error) {
 	length, err := ReadVInt(r.reader)
 	if err != nil {
@@ -149,4 +269,20 @@ func (r *Reader) readString() (string, error) {
 	}
 
 	return string(b), nil
+}
+
+func (w *Writer) writeString(s string) (int, error) {
+	length := int64(len(s))
+	buf := new(bytes.Buffer)
+	_, err := WriteVInt(buf, length)
+	if err != nil {
+		return 0, err
+	}
+
+	_, err = buf.Write([]byte(s))
+	if err != nil {
+		return 0, err
+	}
+
+	return w.writer.Write(buf.Bytes())
 }
