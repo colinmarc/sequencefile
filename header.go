@@ -77,7 +77,6 @@ func (r *Reader) ReadHeader() error {
 			return err
 		}
 
-		// TODO: DRY this out along with other COMPRESSION
 		r.Header.CompressionCodecClassName = compressionCodecClassName
 		switch r.Header.CompressionCodecClassName {
 		case GzipClassName:
@@ -103,7 +102,8 @@ func (r *Reader) ReadHeader() error {
 		return err
 	}
 
-	r.Header.SyncMarker = marker
+	r.Header.SyncMarker = make([]byte, SyncSize)
+	copy(r.Header.SyncMarker, marker)
 	r.syncMarkerBytes = make([]byte, SyncSize)
 	copy(r.syncMarkerBytes, marker)
 

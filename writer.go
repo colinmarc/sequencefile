@@ -52,6 +52,7 @@ func (w *Writer) sync() (int, error) {
 		}
 		written, err = w.writeSyncMarker()
 		totalwritten += written
+
 		return totalwritten, err
 	}
 	return 0, nil

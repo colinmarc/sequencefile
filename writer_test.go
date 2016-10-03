@@ -67,12 +67,12 @@ var testcompressionspecs = []testCompressionSpec{
 		CompressionCodec:          SnappyCompression,
 		CompressionCodecClassName: SnappyClassName,
 	},
-	// {
-	// 	SpecName:                  "BlockCompression with GzipCompression",
-	// 	Compression:               BlockCompression,
-	// 	CompressionCodec:          GzipCompression,
-	// 	CompressionCodecClassName: GzipClassName,
-	// },
+	{
+		SpecName:                  "BlockCompression with GzipCompression",
+		Compression:               BlockCompression,
+		CompressionCodec:          GzipCompression,
+		CompressionCodecClassName: GzipClassName,
+	},
 	{
 		SpecName:                  "RecordCompression with GzipCompression",
 		Compression:               RecordCompression,
@@ -136,6 +136,11 @@ func TestWriteFullSequenceFiles(t *testing.T) {
 			err = writer.Append(PutBytesWritable([]byte("longstring")), PutBytesWritable(longstring))
 			assert.NoError(t, err, "key/value should successfully append")
 
+			for i := 0; i < 1000; i++ {
+				err = writer.Append(PutBytesWritable([]byte(fmt.Sprintf("key %d", i))), PutBytesWritable([]byte(fmt.Sprintf("value %d", i))))
+				assert.NoError(t, err, "key/value should successfully append")
+			}
+
 			err = writer.Flush()
 			assert.NoError(t, err, "flush should succeed")
 
@@ -165,6 +170,13 @@ func TestWriteFullSequenceFiles(t *testing.T) {
 			assert.True(t, success, "we successfully read a key/value pair")
 			assert.Equal(t, []byte("longstring"), BytesWritable(reader.Key()), "we read the correct key")
 			assert.Equal(t, longstring, BytesWritable(reader.Value()), "we read the correct value")
+
+			for i := 0; i < 1000; i++ {
+				success = reader.Scan()
+				assert.True(t, success, "we successfully read a key/value pair")
+				assert.Equal(t, []byte(fmt.Sprintf("key %d", i)), BytesWritable(reader.Key()), "we read the correct key")
+				assert.Equal(t, []byte(fmt.Sprintf("value %d", i)), BytesWritable(reader.Value()), "we read the correct value")
+			}
 
 			assert.Equal(t, []byte{}, buf.Bytes(), "there should be nothing left in the buffer")
 
