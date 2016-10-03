@@ -15,6 +15,8 @@ const (
 
 	SnappyBlockSize           = 128 * 1024
 	BlockCompressionBlockSize = 128 * 1024
+
+	SequenceFileVersion = 6
 )
 
 const (

@@ -20,7 +20,7 @@ type Writer struct {
 
 func NewWriter(w io.Writer) *Writer {
 	header := Header{
-		Version:        6,
+		Version:        SequenceFileVersion,
 		KeyClassName:   BytesWritableClassName,
 		ValueClassName: BytesWritableClassName,
 		Compression:    NoCompression,
