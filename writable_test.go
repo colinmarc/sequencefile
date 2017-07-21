@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"testing"
 
+	"bytes"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -83,4 +85,67 @@ func TestLongWritable(t *testing.T) {
 			assert.Equal(t, spec.expected, LongWritable(spec.b), "LongWritable should unwrap correctly")
 		})
 	}
+}
+
+func assertWriteWritable(t *testing.T, className string, v interface{}, expected []byte) {
+	w, err := NewWritableWriter(className)
+	assert.NoError(t, err)
+
+	var buf bytes.Buffer
+	err = w(&buf, v)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, buf.Bytes())
+}
+
+func TestWriteWritable(t *testing.T) {
+	for _, spec := range bytesWritables {
+		assertWriteWritable(t, BytesWritableClassName, spec.expected, spec.b)
+	}
+	for _, spec := range texts {
+		assertWriteWritable(t, TextClassName, spec.expected, spec.b)
+	}
+	for _, spec := range intWritables {
+		assertWriteWritable(t, IntWritableClassName, spec.expected, spec.b)
+	}
+	for _, spec := range longWritables {
+		assertWriteWritable(t, LongWritableClassName, spec.expected, spec.b)
+	}
+
+	// Errors.
+	var buf bytes.Buffer
+	w, err := NewWritableWriter("fake")
+	assert.Nil(t, w)
+	assert.Error(t, err)
+	w, err = NewWritableWriter(BytesWritableClassName)
+	assert.NotNil(t, w)
+	assert.NoError(t, err)
+	assert.NoError(t, w(&buf, []byte{}))
+	assert.Error(t, w(&buf, ""))
+	assert.Error(t, w(&buf, int32(1)))
+	assert.Error(t, w(&buf, int64(1)))
+	assert.Error(t, w(&buf, []string{}))
+	w, err = NewWritableWriter(TextClassName)
+	assert.NotNil(t, w)
+	assert.NoError(t, err)
+	assert.Error(t, w(&buf, []byte{}))
+	assert.NoError(t, w(&buf, ""))
+	assert.Error(t, w(&buf, int32(1)))
+	assert.Error(t, w(&buf, int64(1)))
+	assert.Error(t, w(&buf, []string{}))
+	w, err = NewWritableWriter(IntWritableClassName)
+	assert.NotNil(t, w)
+	assert.NoError(t, err)
+	assert.Error(t, w(&buf, []byte{}))
+	assert.Error(t, w(&buf, ""))
+	assert.NoError(t, w(&buf, int32(1)))
+	assert.Error(t, w(&buf, int64(1)))
+	assert.Error(t, w(&buf, []string{}))
+	w, err = NewWritableWriter(LongWritableClassName)
+	assert.NotNil(t, w)
+	assert.NoError(t, err)
+	assert.Error(t, w(&buf, []byte{}))
+	assert.Error(t, w(&buf, ""))
+	assert.Error(t, w(&buf, int32(1)))
+	assert.NoError(t, w(&buf, int64(1)))
+	assert.Error(t, w(&buf, []string{}))
 }
