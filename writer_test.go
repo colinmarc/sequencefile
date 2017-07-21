@@ -61,6 +61,9 @@ func TestWriterCompressionSettings(t *testing.T) {
 		{RecordCompression, GzipCompression, true},
 		{RecordCompression, 0, false},
 		{RecordCompression, SnappyCompression, true},
+		{BlockCompression, GzipCompression, true},
+		{BlockCompression, 0, false},
+		{BlockCompression, SnappyCompression, true},
 	}
 
 	for _, cmp := range compressions {
@@ -79,14 +82,18 @@ func TestWriterCompressionSettings(t *testing.T) {
 	}
 }
 
+type compressionSpec struct {
+	compression Compression
+	codec       CompressionCodec
+}
+
 func TestWriterRoundTrip(t *testing.T) {
-	compressions := []struct {
-		compression Compression
-		codec       CompressionCodec
-	}{
+	compressions := []compressionSpec{
 		{NoCompression, 0},
 		{RecordCompression, GzipCompression},
 		{RecordCompression, SnappyCompression},
+		{BlockCompression, GzipCompression},
+		{BlockCompression, SnappyCompression},
 	}
 
 	pairs := []writePair{
@@ -130,29 +137,39 @@ func TestWriterRoundTrip(t *testing.T) {
 }
 
 func TestWriterLong(t *testing.T) {
-	var pairs []writePair
-	value := bytes.Repeat([]byte{0}, 100)
-	for i := 0; i < 1000; i++ {
-		pairs = append(pairs, writePair{int64(i), value})
+	compressions := []compressionSpec{
+		{NoCompression, 0},
+		{RecordCompression, GzipCompression},
+		{BlockCompression, SnappyCompression},
 	}
 
-	buf := assertWrite(t,
-		&WriterConfig{
-			KeyClass:   LongWritableClassName,
-			ValueClass: BytesWritableClassName,
-		},
-		pairs,
-	)
+	for _, cmp := range compressions {
+		var pairs []writePair
+		value := bytes.Repeat([]byte{0}, 2000)
+		for i := 0; i < 2000; i++ {
+			pairs = append(pairs, writePair{int64(i), value})
+		}
 
-	r := NewReader(bytes.NewBuffer(buf))
-	require.NoError(t, r.ReadHeader())
-	for _, p := range pairs {
-		assert.True(t, r.Scan())
-		assert.Equal(t, p.k, LongWritable(r.Key()))
-		assert.Equal(t, p.v, BytesWritable(r.Value()))
+		buf := assertWrite(t,
+			&WriterConfig{
+				KeyClass:         LongWritableClassName,
+				ValueClass:       BytesWritableClassName,
+				Compression:      cmp.compression,
+				CompressionCodec: cmp.codec,
+			},
+			pairs,
+		)
+
+		r := NewReader(bytes.NewBuffer(buf))
+		require.NoError(t, r.ReadHeader())
+		for _, p := range pairs {
+			assert.True(t, r.Scan())
+			assert.Equal(t, p.k, LongWritable(r.Key()))
+			assert.Equal(t, p.v, BytesWritable(r.Value()))
+		}
+		assert.False(t, r.Scan())
+		assert.NoError(t, r.Err())
 	}
-	assert.False(t, r.Scan())
-	assert.NoError(t, r.Err())
 }
 
 type errorWriter struct {

@@ -3,44 +3,11 @@ package sequencefile
 import (
 	"bytes"
 	"compress/gzip"
-	"encoding/binary"
 	"fmt"
 	"io"
 	"math/rand"
 	"time"
 )
-
-// A Writer wrapper that:
-// - Stores any error that occurs, and stops writing.
-// - Keeps track of how many bytes have been written.
-// - Closes the wrapped writer, if it's close-able.
-type writerWriter struct {
-	w     io.Writer
-	bytes int
-	err   error
-}
-
-func (w *writerWriter) setErr(err error) {
-	if w.err == nil {
-		w.err = err
-	}
-}
-
-func (w *writerWriter) Write(buf []byte) (n int, err error) {
-	if w.err == nil {
-		n, w.err = w.w.Write(buf)
-		w.bytes += n
-	}
-	return n, w.err
-}
-
-func (w *writerWriter) Close() error {
-	cw, ok := w.w.(io.WriteCloser)
-	if ok {
-		return cw.Close()
-	}
-	return nil
-}
 
 // We don't really need streaming compression.
 type compressor interface {
@@ -102,19 +69,17 @@ type WriterConfig struct {
 // A Writer writes key/value pairs to an output stream.
 type Writer struct {
 	cfg         *WriterConfig
-	w           *writerWriter
+	w           *writerHelper
 	keyWriter   WritableWriter
 	valueWriter WritableWriter
 	sync        [SyncSize]byte
+	pairs       pairWriter
 	compressor  compressor
 }
 
 const (
 	seqMagic        = "SEQ"
 	seqVersion byte = 6
-
-	syncMarker = -1
-	syncBytes  = 2000
 )
 
 func NewWriter(cfg *WriterConfig) (w *Writer, err error) {
@@ -132,10 +97,6 @@ func NewWriter(cfg *WriterConfig) (w *Writer, err error) {
 		cfg.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 	}
 
-	if cfg.Compression == BlockCompression {
-		panic("TODO: Block compression")
-	}
-
 	keyWriter, err := NewWritableWriter(cfg.KeyClass)
 	if err != nil {
 		return nil, err
@@ -147,7 +108,7 @@ func NewWriter(cfg *WriterConfig) (w *Writer, err error) {
 
 	w = &Writer{
 		cfg:         cfg,
-		w:           &writerWriter{w: cfg.Writer},
+		w:           &writerHelper{w: cfg.Writer},
 		keyWriter:   keyWriter,
 		valueWriter: valueWriter,
 	}
@@ -160,87 +121,45 @@ func NewWriter(cfg *WriterConfig) (w *Writer, err error) {
 	if err := w.writeHeader(); err != nil {
 		return nil, err
 	}
+
+	if err := w.initPairWriter(); err != nil {
+		return nil, err
+	}
+
 	return w, nil
 }
 
-func (w *Writer) write(buf []byte) error {
-	w.w.Write(buf)
-	return w.w.err
-}
-
-func (w *Writer) writeString(s string) error {
-	WriteVInt(w.w, int64(len(s)))
-	return w.write([]byte(s))
-}
-
-func (w *Writer) writeBool(b bool) error {
-	if b {
-		return w.write([]byte{1})
-	} else {
-		return w.write([]byte{0})
-	}
-}
-
-func (w *Writer) writeInt32(i int32) error {
-	var bs [4]byte
-	binary.BigEndian.PutUint32(bs[:], uint32(i))
-	return w.write(bs[:])
-}
-
 func (w *Writer) writeMetadata() error {
-	w.writeInt32(int32(len(w.cfg.Metadata)))
+	w.w.writeInt32(int32(len(w.cfg.Metadata)))
 	for k, v := range w.cfg.Metadata {
-		w.writeString(k)
-		w.writeString(v)
+		w.w.writeString(k)
+		w.w.writeString(v)
 	}
 	return w.w.err
 }
 
 func (w *Writer) writeHeader() error {
-	w.write([]byte(seqMagic))
-	w.write([]byte{seqVersion})
-	w.writeString(w.cfg.KeyClass)
-	w.writeString(w.cfg.ValueClass)
-	w.writeBool(w.cfg.Compression != NoCompression)
-	w.writeBool(w.cfg.Compression == BlockCompression)
+	w.w.write([]byte(seqMagic))
+	w.w.write([]byte{seqVersion})
+	w.w.writeString(w.cfg.KeyClass)
+	w.w.writeString(w.cfg.ValueClass)
+	w.w.writeBool(w.cfg.Compression != NoCompression)
+	w.w.writeBool(w.cfg.Compression == BlockCompression)
 
 	if w.cfg.Compression != NoCompression {
 		codecName, err := w.codecName(w.cfg.CompressionCodec)
 		if err != nil {
 			return err
 		}
-		w.writeString(codecName)
+		w.w.writeString(codecName)
 	}
 
 	w.writeMetadata()
 
 	w.cfg.Rand.Read(w.sync[:])
-	w.write(w.sync[:])
+	w.w.write(w.sync[:])
 
 	w.w.bytes = 0
-	return w.w.err
-}
-
-func (w *Writer) writeSync() error {
-	w.writeInt32(syncMarker)
-	w.write(w.sync[:])
-	w.w.bytes = 0
-	return w.w.err
-}
-
-func (w *Writer) checkSync() error {
-	if w.w.bytes > syncBytes {
-		w.writeSync()
-	}
-	return w.w.err
-}
-
-func (w *Writer) doAppend(key []byte, value []byte) error {
-	w.checkSync()
-	w.writeInt32(int32(len(key) + len(value)))
-	w.writeInt32(int32(len(key)))
-	w.write(key)
-	w.write(value)
 	return w.w.err
 }
 
@@ -253,21 +172,21 @@ func (w *Writer) Append(key interface{}, value interface{}) (err error) {
 	if err = w.valueWriter(&vbuf, value); err != nil {
 		return
 	}
-	vbytes := vbuf.Bytes()
-	if w.cfg.Compression == RecordCompression {
-		if vbytes, err = w.compressor.compress(vbytes); err != nil {
-			return
-		}
-	}
-
-	return w.doAppend(kbuf.Bytes(), vbytes)
+	return w.pairs.Write(kbuf.Bytes(), vbuf.Bytes())
 }
 
-func (w *Writer) Close() (err error) {
-	if err = w.w.Close(); err != nil {
-		return err
+func (w *Writer) Close() error {
+	var ret error
+	if err := w.pairs.Close(); err != nil {
+		ret = err
 	}
-	return w.w.err
+	if err := w.w.Close(); err != nil {
+		ret = err
+	}
+	if w.w.err != nil {
+		ret = w.w.err
+	}
+	return ret
 }
 
 func (w *Writer) codecName(codec CompressionCodec) (string, error) {
@@ -290,4 +209,24 @@ func (w *Writer) newCompressor(codec CompressionCodec) (compressor, error) {
 	default:
 		return nil, fmt.Errorf("Unknown compression codec %d", w.cfg.CompressionCodec)
 	}
+}
+
+func (w *Writer) initPairWriter() error {
+	switch w.cfg.Compression {
+	case NoCompression:
+		w.pairs = &uncompressedPairs{w.w, w.sync[:]}
+	case RecordCompression:
+		w.pairs = &recordCompressedPairs{uncompressedPairs{w.w, w.sync[:]}, w.compressor}
+	case BlockCompression:
+		w.pairs = &blockPairs{
+			w:          w.w,
+			sync:       w.sync[:],
+			compressor: w.compressor,
+			blockSize:  w.cfg.BlockSize,
+		}
+	}
+	if w.pairs == nil {
+		return fmt.Errorf("Unknown compression type %d", w.cfg.Compression)
+	}
+	return w.pairs.Init()
 }
