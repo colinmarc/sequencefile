@@ -54,9 +54,8 @@ func (w *writerHelper) writeString(s string) error {
 func (w *writerHelper) writeBool(b bool) error {
 	if b {
 		return w.write([]byte{1})
-	} else {
-		return w.write([]byte{0})
 	}
+	return w.write([]byte{0})
 }
 
 func (w *writerHelper) writeInt32(i int32) error {

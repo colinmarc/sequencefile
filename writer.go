@@ -66,7 +66,7 @@ type WriterConfig struct {
 	Rand *rand.Rand
 }
 
-// A Writer writes key/value pairs to an output stream.
+// A Writer writes key/value pairs to a sequence file output stream.
 type Writer struct {
 	cfg         *WriterConfig
 	w           *writerHelper
@@ -82,6 +82,7 @@ const (
 	seqVersion byte = 6
 )
 
+// NewWriter constructs a new Writer.
 func NewWriter(cfg *WriterConfig) (w *Writer, err error) {
 	// Set some defaults.
 	if cfg.KeyClass == "" {
@@ -163,6 +164,9 @@ func (w *Writer) writeHeader() error {
 	return w.w.err
 }
 
+// Append adds a key/value pair to this Writer.
+// The types of the key and value must match the KeyClass and ValueClass
+// this Writer was configured with.
 func (w *Writer) Append(key interface{}, value interface{}) (err error) {
 	// These errors do not cause the whole writer to error.
 	var kbuf, vbuf bytes.Buffer
@@ -175,6 +179,7 @@ func (w *Writer) Append(key interface{}, value interface{}) (err error) {
 	return w.pairs.Write(kbuf.Bytes(), vbuf.Bytes())
 }
 
+// Close frees resources held by this Writer.
 func (w *Writer) Close() error {
 	var ret error
 	if err := w.pairs.Close(); err != nil {

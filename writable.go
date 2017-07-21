@@ -44,6 +44,9 @@ func LongWritable(b []byte) int64 {
 	return int64(binary.BigEndian.Uint64(b))
 }
 
+// A WritableWriter knows how to write data wrapped in Hadoop Writables.
+//
+// Each WritableWriter understands just a single type of data.
 type WritableWriter func(io.Writer, interface{}) error
 
 type writableWriteError struct {
@@ -108,6 +111,7 @@ func writeLong(w io.Writer, value interface{}) (err error) {
 	return
 }
 
+// NewWritableWriter gets a WritableWriter for a given Hadoop class name.
 func NewWritableWriter(className string) (WritableWriter, error) {
 	switch className {
 	case BytesWritableClassName:
