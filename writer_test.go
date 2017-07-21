@@ -60,6 +60,7 @@ func TestWriterCompressionSettings(t *testing.T) {
 		{NoCompression, GzipCompression, true},
 		{RecordCompression, GzipCompression, true},
 		{RecordCompression, 0, false},
+		{RecordCompression, SnappyCompression, true},
 	}
 
 	for _, cmp := range compressions {
@@ -85,6 +86,7 @@ func TestWriterRoundTrip(t *testing.T) {
 	}{
 		{NoCompression, 0},
 		{RecordCompression, GzipCompression},
+		{RecordCompression, SnappyCompression},
 	}
 
 	pairs := []writePair{

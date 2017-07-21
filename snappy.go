@@ -128,3 +128,39 @@ func (s *snappyFrameReader) Reset(r io.Reader) error {
 func (s *snappyFrameReader) Close() error {
 	return nil
 }
+
+const snappyDefaultChunkSize = 1 << 16
+
+type snappyCompressor struct {
+	chunkSize int
+}
+
+func (c snappyCompressor) compress(src []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	var bs [4]byte
+
+	binary.BigEndian.PutUint32(bs[:], uint32(len(src)))
+	if _, err := buf.Write(bs[:]); err != nil {
+		return nil, err
+	}
+
+	var chunk, dst []byte
+	for len(src) > 0 {
+		l := c.chunkSize
+		if l > len(src) {
+			l = len(src)
+		}
+		chunk, src = src[:l], src[l:]
+		dst = snappy.Encode(dst, chunk)
+
+		binary.BigEndian.PutUint32(bs[:], uint32(len(dst)))
+		if _, err := buf.Write(bs[:]); err != nil {
+			return nil, err
+		}
+		if _, err := buf.Write(dst); err != nil {
+			return nil, err
+		}
+	}
+
+	return buf.Bytes(), nil
+}

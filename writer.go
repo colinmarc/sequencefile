@@ -285,8 +285,9 @@ func (w *Writer) newCompressor(codec CompressionCodec) (compressor, error) {
 	switch w.cfg.CompressionCodec {
 	case GzipCompression:
 		return &gzipCompressor{}, nil
+	case SnappyCompression:
+		return snappyCompressor{snappyDefaultChunkSize}, nil
 	default:
-		// TODO: Snappy
 		return nil, fmt.Errorf("Unknown compression codec %d", w.cfg.CompressionCodec)
 	}
 }
