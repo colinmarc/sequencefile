@@ -1,6 +1,9 @@
 package sequencefile
 
-import "io"
+import (
+	"encoding/binary"
+	"io"
+)
 
 // ReadVInt reads an int64 encoded in hadoop's "VInt" format, described and
 // implemented here: https://goo.gl/1h4mrG. It does at most two reads to the
@@ -59,4 +62,36 @@ func mustReadByte(r io.Reader) (byte, error) {
 	}
 
 	return b, err
+}
+
+// WriteVInt writes an int64 encoded in Hadoop's "VInt" format.
+func WriteVInt(w io.Writer, i int64) (err error) {
+	if i >= -112 && i < 127 {
+		_, err = w.Write([]byte{byte(i)})
+		return err
+	}
+
+	bits := uint64(i)
+	if i < 0 {
+		bits = ^bits
+	}
+
+	var bs [8]byte
+	binary.BigEndian.PutUint64(bs[:], bits)
+
+	for n, b := range bs {
+		if b != 0 {
+			if i < 0 {
+				_, err = w.Write([]byte{byte(-128 + n)})
+			} else {
+				_, err = w.Write([]byte{byte(-120 + n)})
+			}
+			if err != nil {
+				return err
+			}
+			_, err = w.Write(bs[n:])
+			return err
+		}
+	}
+	panic("Unreachable")
 }

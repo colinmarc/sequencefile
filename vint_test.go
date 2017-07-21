@@ -48,3 +48,14 @@ func TestVInt(t *testing.T) {
 		})
 	}
 }
+
+func TestVIntWrite(t *testing.T) {
+	for _, spec := range vints {
+		t.Run(strconv.FormatInt(spec.expected, 10), func(t *testing.T) {
+			var buf bytes.Buffer
+			err := WriteVInt(&buf, spec.expected)
+			assert.NoError(t, err, "WriteVInt should return successfully")
+			assert.Equal(t, spec.b, buf.Bytes(), "WriteVInt should return the correct result")
+		})
+	}
+}
