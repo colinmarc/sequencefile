@@ -2,8 +2,9 @@ package sequencefile
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/binary"
-	"errors"
+	"fmt"
 	"io"
 	"math/rand"
 	"time"
@@ -17,6 +18,12 @@ type writerWriter struct {
 	w     io.Writer
 	bytes int
 	err   error
+}
+
+func (w *writerWriter) setErr(err error) {
+	if w.err == nil {
+		w.err = err
+	}
 }
 
 func (w *writerWriter) Write(buf []byte) (n int, err error) {
@@ -33,6 +40,32 @@ func (w *writerWriter) Close() error {
 		return cw.Close()
 	}
 	return nil
+}
+
+// We don't really need streaming compression.
+type compressor interface {
+	compress([]byte) ([]byte, error)
+}
+
+type gzipCompressor struct {
+	gz  *gzip.Writer
+	buf bytes.Buffer
+}
+
+func (g *gzipCompressor) compress(src []byte) ([]byte, error) {
+	if g.gz != nil {
+		g.buf.Reset()
+		g.gz.Reset(&g.buf)
+	} else {
+		g.gz = gzip.NewWriter(&g.buf)
+	}
+	if _, err := g.gz.Write(src); err != nil {
+		return nil, err
+	}
+	if err := g.gz.Close(); err != nil {
+		return nil, err
+	}
+	return g.buf.Bytes(), nil
 }
 
 // A WriterConfig specifies the configuration for a Writer.
@@ -73,6 +106,7 @@ type Writer struct {
 	keyWriter   WritableWriter
 	valueWriter WritableWriter
 	sync        [SyncSize]byte
+	compressor  compressor
 }
 
 const (
@@ -83,7 +117,7 @@ const (
 	syncBytes  = 2000
 )
 
-func NewWriter(cfg *WriterConfig) (*Writer, error) {
+func NewWriter(cfg *WriterConfig) (w *Writer, err error) {
 	// Set some defaults.
 	if cfg.KeyClass == "" {
 		cfg.KeyClass = BytesWritableClassName
@@ -98,8 +132,8 @@ func NewWriter(cfg *WriterConfig) (*Writer, error) {
 		cfg.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 	}
 
-	if cfg.Compression != NoCompression {
-		return nil, errors.New("TODO: Support compression")
+	if cfg.Compression == BlockCompression {
+		panic("TODO: Block compression")
 	}
 
 	keyWriter, err := NewWritableWriter(cfg.KeyClass)
@@ -111,13 +145,18 @@ func NewWriter(cfg *WriterConfig) (*Writer, error) {
 		return nil, err
 	}
 
-	w := &Writer{
+	w = &Writer{
 		cfg:         cfg,
 		w:           &writerWriter{w: cfg.Writer},
 		keyWriter:   keyWriter,
 		valueWriter: valueWriter,
 	}
 
+	if w.cfg.Compression != NoCompression {
+		if w.compressor, err = w.newCompressor(w.cfg.CompressionCodec); err != nil {
+			return nil, err
+		}
+	}
 	if err := w.writeHeader(); err != nil {
 		return nil, err
 	}
@@ -162,9 +201,17 @@ func (w *Writer) writeHeader() error {
 	w.write([]byte{seqVersion})
 	w.writeString(w.cfg.KeyClass)
 	w.writeString(w.cfg.ValueClass)
-	w.writeBool(w.cfg.Compression == BlockCompression)
 	w.writeBool(w.cfg.Compression != NoCompression)
-	// TODO: Compression name.
+	w.writeBool(w.cfg.Compression == BlockCompression)
+
+	if w.cfg.Compression != NoCompression {
+		codecName, err := w.codecName(w.cfg.CompressionCodec)
+		if err != nil {
+			return err
+		}
+		w.writeString(codecName)
+	}
+
 	w.writeMetadata()
 
 	w.cfg.Rand.Read(w.sync[:])
@@ -197,15 +244,23 @@ func (w *Writer) doAppend(key []byte, value []byte) error {
 	return w.w.err
 }
 
-func (w *Writer) Append(key interface{}, value interface{}) error {
+func (w *Writer) Append(key interface{}, value interface{}) (err error) {
+	// These errors do not cause the whole writer to error.
 	var kbuf, vbuf bytes.Buffer
-	if err := w.keyWriter(&kbuf, key); err != nil {
-		return err
+	if err = w.keyWriter(&kbuf, key); err != nil {
+		return
 	}
-	if err := w.valueWriter(&vbuf, value); err != nil {
-		return err
+	if err = w.valueWriter(&vbuf, value); err != nil {
+		return
 	}
-	return w.doAppend(kbuf.Bytes(), vbuf.Bytes())
+	vbytes := vbuf.Bytes()
+	if w.cfg.Compression == RecordCompression {
+		if vbytes, err = w.compressor.compress(vbytes); err != nil {
+			return
+		}
+	}
+
+	return w.doAppend(kbuf.Bytes(), vbytes)
 }
 
 func (w *Writer) Close() (err error) {
@@ -213,4 +268,25 @@ func (w *Writer) Close() (err error) {
 		return err
 	}
 	return w.w.err
+}
+
+func (w *Writer) codecName(codec CompressionCodec) (string, error) {
+	switch codec {
+	case GzipCompression:
+		return "org.apache.hadoop.io.compress.GzipCodec", nil
+	case SnappyCompression:
+		return "org.apache.hadoop.io.compress.SnappyCodec", nil
+	default:
+		return "", fmt.Errorf("Unknown compression codec: %d", codec)
+	}
+}
+
+func (w *Writer) newCompressor(codec CompressionCodec) (compressor, error) {
+	switch w.cfg.CompressionCodec {
+	case GzipCompression:
+		return &gzipCompressor{}, nil
+	default:
+		// TODO: Snappy
+		return nil, fmt.Errorf("Unknown compression codec %d", w.cfg.CompressionCodec)
+	}
 }
