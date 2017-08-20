@@ -240,6 +240,8 @@ func (r *Reader) getDecompressor(src io.Reader) (io.Reader, error) {
 		switch r.codec {
 		case GzipCompression:
 			r.decompressor, err = gzip.NewReader(src)
+		case Bzip2Compression:
+			r.decompressor = newBzip2Reader(src)
 		case SnappyCompression:
 			r.decompressor, err = newSnappyFrameReader(src)
 		case ZlibCompression:

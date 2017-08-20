@@ -3,6 +3,7 @@ module github.com/colinmarc/sequencefile
 go 1.19
 
 require (
+	github.com/dsnet/compress v0.0.1
 	github.com/golang/snappy v0.0.4
 	github.com/klauspost/compress v1.16.7
 	github.com/stretchr/testify v1.8.4

@@ -198,6 +198,8 @@ func (w *Writer) codecName(codec CompressionCodec) (string, error) {
 	switch codec {
 	case GzipCompression:
 		return "org.apache.hadoop.io.compress.GzipCodec", nil
+	case Bzip2Compression:
+		return "org.apache.hadoop.io.compress.BZip2Codec", nil
 	case SnappyCompression:
 		return "org.apache.hadoop.io.compress.SnappyCodec", nil
 	case ZstdCompression:
@@ -211,6 +213,8 @@ func (w *Writer) newCompressor(codec CompressionCodec) (compressor, error) {
 	switch w.cfg.CompressionCodec {
 	case GzipCompression:
 		return &gzipCompressor{}, nil
+	case Bzip2Compression:
+		return &bzip2Compressor{}, nil
 	case SnappyCompression:
 		return snappyCompressor{snappyDefaultChunkSize}, nil
 	case ZstdCompression:
