@@ -1,2 +1,2 @@
 language: go
-go: 1.7rc3
+go: 1.x
