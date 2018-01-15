@@ -35,6 +35,12 @@ var files = []fileSpec{
 		SnappyClassName,
 	},
 	{
+		"testdata/record_compressed_zlib.sequencefile",
+		RecordCompression,
+		ZlibCompression,
+		ZlibClassName,
+	},
+	{
 		"testdata/block_compressed_gzip.sequencefile",
 		BlockCompression,
 		GzipCompression,
@@ -45,6 +51,12 @@ var files = []fileSpec{
 		BlockCompression,
 		SnappyCompression,
 		SnappyClassName,
+	},
+	{
+		"testdata/block_compressed_zlib.sequencefile",
+		BlockCompression,
+		ZlibCompression,
+		ZlibClassName,
 	},
 }
 
