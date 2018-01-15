@@ -75,10 +75,12 @@ func (r *Reader) ReadHeader() error {
 
 		r.Header.CompressionCodecClassName = compressionCodecClassName
 		switch r.Header.CompressionCodecClassName {
-		case "org.apache.hadoop.io.compress.GzipCodec":
+		case GzipClassName:
 			r.Header.CompressionCodec = GzipCompression
-		case "org.apache.hadoop.io.compress.SnappyCodec":
+		case SnappyClassName:
 			r.Header.CompressionCodec = SnappyCompression
+		case ZlibClassName:
+			r.Header.CompressionCodec = ZlibCompression
 		default:
 			return fmt.Errorf("sequencefile: unsupported compression codec: %s", r.Header.CompressionCodecClassName)
 		}

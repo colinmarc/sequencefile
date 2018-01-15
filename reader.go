@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"compress/zlib"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -242,6 +243,12 @@ func (r *Reader) getDecompressor(src io.Reader) (io.Reader, error) {
 			r.decompressor, err = gzip.NewReader(src)
 		case SnappyCompression:
 			r.decompressor, err = newSnappyFrameReader(src)
+		case ZlibCompression:
+			var zlibReader io.ReadCloser
+			zlibReader, err = zlib.NewReader(src)
+			if err == nil {
+				r.decompressor = &zlibReaderShim{zlibReader}
+			}
 		default:
 			panic("compression set without codec")
 		}
@@ -257,4 +264,23 @@ func (r *Reader) close(err error) {
 	if r.decompressor != nil {
 		r.decompressor.Close()
 	}
+}
+
+// unfortunately, the zlib reader provides a _slightly_ different interface
+// than the one we want. this shim serves only to turn the function signature
+// of Reset(io.Reader, []byte) into Reset(io.Reader)
+type zlibReaderShim struct {
+	r io.ReadCloser
+}
+
+func (z *zlibReaderShim) Reset(r io.Reader) error {
+	// the zlib docs guarantee that the ReadCloser returned by NewReader()
+	// will also implement zlib.Resetter, so this type assertion should be safe
+	return z.r.(zlib.Resetter).Reset(r, nil)
+}
+func (z *zlibReaderShim) Read(p []byte) (int, error) {
+	return z.r.Read(p)
+}
+func (z *zlibReaderShim) Close() error {
+	return z.r.Close()
 }
