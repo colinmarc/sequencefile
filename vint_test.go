@@ -2,7 +2,7 @@ package sequencefile
 
 import (
 	"bytes"
-	"strconv"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,8 +17,8 @@ import (
 //   Hex.encodeHexString(baos.toByteArray)
 // }
 var vints = []struct {
-	b        []byte
-	expected int64
+	bytes  []byte
+	number int64
 }{
 	{[]byte{0x00}, 0},
 	{[]byte{0x01}, 1},
@@ -41,10 +41,18 @@ var vints = []struct {
 
 func TestVInt(t *testing.T) {
 	for _, spec := range vints {
-		t.Run(strconv.FormatInt(spec.expected, 10), func(t *testing.T) {
-			res, err := ReadVInt(bytes.NewBuffer(spec.b))
+		t.Run(fmt.Sprintf("read %d", spec.number), func(t *testing.T) {
+			res, err := ReadVInt(bytes.NewBuffer(spec.bytes))
 			assert.NoError(t, err, "ReadVInt should return successfully")
-			assert.Equal(t, spec.expected, res, "ReadVInt should return the correct result")
+			assert.Equal(t, spec.number, res, "ReadVInt should return the correct result")
+		})
+
+		t.Run(fmt.Sprintf("write %d", spec.number), func(t *testing.T) {
+			buf := new(bytes.Buffer)
+			written, err := WriteVInt(buf, spec.number)
+			assert.NoError(t, err, "WriteVInt should return successfully")
+			assert.Equal(t, len(spec.bytes), written, "WriteVInt should return the number of bytes written")
+			assert.Equal(t, spec.bytes, buf.Bytes(), "WriteVInt should write the correct result")
 		})
 	}
 }
