@@ -7,6 +7,7 @@ import (
 	"io"
 	"math/rand"
 	"time"
+	"strconv"
 )
 
 // We don't really need streaming compression.
@@ -17,6 +18,23 @@ type compressor interface {
 type gzipCompressor struct {
 	gz  *gzip.Writer
 	buf bytes.Buffer
+}
+
+func NewGzipCompressor(params map[string]string) (*gzipCompressor, error) {
+	if levelString, ok := params[GzipLevel]; ok {
+		level, err := strconv.Atoi(levelString)
+		if err != nil {
+			return nil, err
+		}
+		buf := new(bytes.Buffer)
+		z, err := gzip.NewWriterLevel(buf, level);
+		if err != nil {
+			return nil, err
+		}
+		return &gzipCompressor{z, *buf}, nil
+
+	}
+	return &gzipCompressor{}, nil
 }
 
 func (g *gzipCompressor) compress(src []byte) ([]byte, error) {
@@ -64,6 +82,9 @@ type WriterConfig struct {
 	// Rand is a source of random numbers. Should usually be nil, but useful
 	// for reproducible output.
 	Rand *rand.Rand
+
+	// Compression codec params, e.g. compression level
+	CompressionCodecParams map[string]string
 }
 
 // A Writer writes key/value pairs to a sequence file output stream.
@@ -115,7 +136,7 @@ func NewWriter(cfg *WriterConfig) (w *Writer, err error) {
 	}
 
 	if w.cfg.Compression != NoCompression {
-		if w.compressor, err = w.newCompressor(w.cfg.CompressionCodec); err != nil {
+		if w.compressor, err = w.newCompressor(w.cfg.CompressionCodec, w.cfg.CompressionCodecParams); err != nil {
 			return nil, err
 		}
 	}
@@ -205,10 +226,10 @@ func (w *Writer) codecName(codec CompressionCodec) (string, error) {
 	}
 }
 
-func (w *Writer) newCompressor(codec CompressionCodec) (compressor, error) {
+func (w *Writer) newCompressor(codec CompressionCodec, params map[string]string) (compressor, error) {
 	switch w.cfg.CompressionCodec {
 	case GzipCompression:
-		return &gzipCompressor{}, nil
+		return NewGzipCompressor(params)
 	case SnappyCompression:
 		return snappyCompressor{snappyDefaultChunkSize}, nil
 	default:
