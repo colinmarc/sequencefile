@@ -55,15 +55,20 @@ func TestWriterCompressionSettings(t *testing.T) {
 		compression Compression
 		codec       CompressionCodec
 		ok          bool
+		level		int
 	}{
-		{NoCompression, 0, true},
-		{NoCompression, GzipCompression, true},
-		{RecordCompression, GzipCompression, true},
-		{RecordCompression, 0, false},
-		{RecordCompression, SnappyCompression, true},
-		{BlockCompression, GzipCompression, true},
-		{BlockCompression, 0, false},
-		{BlockCompression, SnappyCompression, true},
+		{NoCompression, 0, true, 0},
+		{NoCompression, GzipCompression, true, 0},
+		{RecordCompression, GzipCompression, true, 0},
+		{RecordCompression, GzipCompression, true, 1},
+		{RecordCompression, GzipCompression, false, 11},
+		{RecordCompression, 0, false, 0},
+		{RecordCompression, SnappyCompression, true, 0},
+		{BlockCompression, GzipCompression, true, 0},
+		{BlockCompression, GzipCompression, true, 1},
+		{BlockCompression, GzipCompression, false, 11},
+		{BlockCompression, 0, false, 0},
+		{BlockCompression, SnappyCompression, true, 0},
 	}
 
 	for _, cmp := range compressions {
@@ -72,6 +77,7 @@ func TestWriterCompressionSettings(t *testing.T) {
 			Writer:           &buf,
 			Compression:      cmp.compression,
 			CompressionCodec: cmp.codec,
+			CompressionLevel: cmp.level,
 		})
 		if cmp.ok {
 			assert.NoError(t, err)
@@ -85,15 +91,18 @@ func TestWriterCompressionSettings(t *testing.T) {
 type compressionSpec struct {
 	compression Compression
 	codec       CompressionCodec
+	level 		int
 }
 
 func TestWriterRoundTrip(t *testing.T) {
 	compressions := []compressionSpec{
-		{NoCompression, 0},
-		{RecordCompression, GzipCompression},
-		{RecordCompression, SnappyCompression},
-		{BlockCompression, GzipCompression},
-		{BlockCompression, SnappyCompression},
+		{NoCompression, 0, 0},
+		{RecordCompression, GzipCompression, 0},
+		{RecordCompression, GzipCompression, 1},
+		{RecordCompression, SnappyCompression, 0},
+		{BlockCompression, GzipCompression, 0},
+		{BlockCompression, GzipCompression, 1},
+		{BlockCompression, SnappyCompression, 0},
 	}
 
 	pairs := []writePair{
@@ -110,6 +119,7 @@ func TestWriterRoundTrip(t *testing.T) {
 			&WriterConfig{
 				Compression:      cmp.compression,
 				CompressionCodec: cmp.codec,
+				CompressionLevel: cmp.level,
 				KeyClass:         TextClassName,
 				ValueClass:       IntWritableClassName,
 				Rand:             rand.New(rand.NewSource(seed)),
@@ -138,9 +148,10 @@ func TestWriterRoundTrip(t *testing.T) {
 
 func TestWriterLong(t *testing.T) {
 	compressions := []compressionSpec{
-		{NoCompression, 0},
-		{RecordCompression, GzipCompression},
-		{BlockCompression, SnappyCompression},
+		{NoCompression, 0, 0},
+		{RecordCompression, GzipCompression, 0},
+		{BlockCompression, SnappyCompression, 0},
+		{BlockCompression, GzipCompression, 1},
 	}
 
 	for _, cmp := range compressions {
@@ -156,6 +167,7 @@ func TestWriterLong(t *testing.T) {
 				ValueClass:       BytesWritableClassName,
 				Compression:      cmp.compression,
 				CompressionCodec: cmp.codec,
+				CompressionLevel: cmp.level,
 			},
 			pairs,
 		)

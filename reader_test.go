@@ -13,10 +13,7 @@ type fileSpec struct {
 	compression Compression
 	codec       CompressionCodec
 	classname   string
-	params      map[string]string
 }
-
-var gzipParams = map[string]string{GzipLevel: "1"}
 
 var files = []fileSpec{
 	{
@@ -24,63 +21,42 @@ var files = []fileSpec{
 		NoCompression,
 		0,
 		"",
-		 nil,
 	},
 	{
 		"testdata/record_compressed_gzip.sequencefile",
 		RecordCompression,
 		GzipCompression,
 		GzipClassName,
-		nil,
-	},
-	{
-		"testdata/record_compressed_gzip.sequencefile",
-		RecordCompression,
-		GzipCompression,
-		GzipClassName,
-		gzipParams,
 	},
 	{
 		"testdata/record_compressed_snappy.sequencefile",
 		RecordCompression,
 		SnappyCompression,
 		SnappyClassName,
-		nil,
 	},
 	{
 		"testdata/record_compressed_zlib.sequencefile",
 		RecordCompression,
 		ZlibCompression,
 		ZlibClassName,
-		nil,
 	},
 	{
 		"testdata/block_compressed_gzip.sequencefile",
 		BlockCompression,
 		GzipCompression,
 		GzipClassName,
-		nil,
-	},
-	{
-		"testdata/block_compressed_gzip.sequencefile",
-		BlockCompression,
-		GzipCompression,
-		GzipClassName,
-		gzipParams,
 	},
 	{
 		"testdata/block_compressed_snappy.sequencefile",
 		BlockCompression,
 		SnappyCompression,
 		SnappyClassName,
-		nil,
 	},
 	{
 		"testdata/block_compressed_zlib.sequencefile",
 		BlockCompression,
 		ZlibCompression,
 		ZlibClassName,
-		nil,
 	},
 }
 
