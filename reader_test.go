@@ -41,6 +41,12 @@ var files = []fileSpec{
 		ZlibClassName,
 	},
 	{
+		"testdata/record_compressed_bzip2.sequencefile",
+		RecordCompression,
+		BZip2Compression,
+		BZip2ClassName,
+	},
+	{
 		"testdata/block_compressed_gzip.sequencefile",
 		BlockCompression,
 		GzipCompression,
@@ -57,6 +63,12 @@ var files = []fileSpec{
 		BlockCompression,
 		ZlibCompression,
 		ZlibClassName,
+	},
+	{
+		"testdata/block_compressed_bzip2.sequencefile",
+		BlockCompression,
+		BZip2Compression,
+		BZip2ClassName,
 	},
 }
 
