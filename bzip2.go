@@ -9,7 +9,7 @@ type bzip2Reader struct {
 	io.Reader
 }
 
-func newBZip2Reader(in io.Reader) *bzip2Reader {
+func newBzip2Reader(in io.Reader) *bzip2Reader {
 	reader := &bzip2Reader{}
 	reader.Reset(in)
 	return reader

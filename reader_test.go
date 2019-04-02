@@ -43,8 +43,8 @@ var files = []fileSpec{
 	{
 		"testdata/record_compressed_bzip2.sequencefile",
 		RecordCompression,
-		BZip2Compression,
-		BZip2ClassName,
+		Bzip2Compression,
+		Bzip2ClassName,
 	},
 	{
 		"testdata/block_compressed_gzip.sequencefile",
@@ -67,8 +67,8 @@ var files = []fileSpec{
 	{
 		"testdata/block_compressed_bzip2.sequencefile",
 		BlockCompression,
-		BZip2Compression,
-		BZip2ClassName,
+		Bzip2Compression,
+		Bzip2ClassName,
 	},
 }
 
