@@ -179,6 +179,20 @@ func (w *Writer) Append(key interface{}, value interface{}) (err error) {
 	return w.pairs.Write(kbuf.Bytes(), vbuf.Bytes())
 }
 
+// AppendBuffered appends a key/value pair but allows the caller to re-use buffers to avoid heap allocations.
+func (w *Writer) AppendBuffered(key, value interface{}, kbuf, vbuf bytes.Buffer) (err error) {
+	// These errors do not cause the whole writer to error.
+	kbuf.Reset()
+	if err = w.keyWriter(&kbuf, key); err != nil {
+		return
+	}
+	vbuf.Reset()
+	if err = w.valueWriter(&vbuf, value); err != nil {
+		return
+	}
+	return w.pairs.Write(kbuf.Bytes(), vbuf.Bytes())
+}
+
 // Close frees resources held by this Writer.
 func (w *Writer) Close() error {
 	var ret error

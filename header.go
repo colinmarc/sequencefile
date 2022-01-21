@@ -81,6 +81,8 @@ func (r *Reader) ReadHeader() error {
 			r.Header.CompressionCodec = SnappyCompression
 		case ZlibClassName:
 			r.Header.CompressionCodec = ZlibCompression
+		case Lz4ClassName:
+			r.Header.CompressionCodec = Lz4Compression
 		default:
 			return fmt.Errorf("sequencefile: unsupported compression codec: %s", r.Header.CompressionCodecClassName)
 		}

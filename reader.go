@@ -244,6 +244,8 @@ func (r *Reader) getDecompressor(src io.Reader) (io.Reader, error) {
 			r.decompressor, err = newSnappyFrameReader(src)
 		case ZlibCompression:
 			r.decompressor, err = newZlibReaderWrapper(src)
+		case Lz4Compression:
+			r.decompressor, err = newLz4ReaderWrapper(src)
 		default:
 			panic("compression set without codec")
 		}

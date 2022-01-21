@@ -11,6 +11,7 @@ const (
 	SyncSize = 16
 
 	GzipClassName   = "org.apache.hadoop.io.compress.GzipCodec"
+	Lz4ClassName    = "org.apache.hadoop.io.compress.Lz4Codec"
 	SnappyClassName = "org.apache.hadoop.io.compress.SnappyCodec"
 	ZlibClassName   = "org.apache.hadoop.io.compress.DefaultCodec"
 )
@@ -25,6 +26,7 @@ const (
 	GzipCompression CompressionCodec = iota + 1
 	SnappyCompression
 	ZlibCompression
+	Lz4Compression
 )
 
 type decompressor interface {
