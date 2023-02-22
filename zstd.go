@@ -40,6 +40,9 @@ func (z zstdCompressor) compress(src []byte) ([]byte, error) {
 		enc.Close()
 		return nil, err
 	}
-	enc.Close()
+	err = enc.Close()
+	if err != nil {
+		return nil, err
+	}
 	return out.Bytes(), nil
 }
