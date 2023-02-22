@@ -48,6 +48,21 @@ func TestWriter(t *testing.T) {
 	fbytes, err := ioutil.ReadFile("testdata/uncompressed_written.sequencefile")
 	require.NoError(t, err)
 	assert.Equal(t, fbytes, buf)
+
+	buf2 := assertWrite(t, &WriterConfig{
+		KeyClass:         BytesWritableClassName,
+		ValueClass:       BytesWritableClassName,
+		Rand:             rand.New(rand.NewSource(42)),
+		Compression:      2,
+		CompressionCodec: 4,
+	},
+		[]writePair{
+			{[]byte("Alice"), []byte("Practice")},
+			{[]byte("Bob"), []byte("Hope")},
+		},
+	)
+	err = ioutil.WriteFile("testdata/record_compressed_zstd.sequencefile", buf2, 0644)
+	require.NoError(t, err)
 }
 
 func TestWriterCompressionSettings(t *testing.T) {
@@ -94,6 +109,7 @@ func TestWriterRoundTrip(t *testing.T) {
 		{RecordCompression, SnappyCompression},
 		{BlockCompression, GzipCompression},
 		{BlockCompression, SnappyCompression},
+		{RecordCompression, ZstdCompression},
 	}
 
 	pairs := []writePair{
