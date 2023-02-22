@@ -58,6 +58,18 @@ var files = []fileSpec{
 		ZlibCompression,
 		ZlibClassName,
 	},
+	{
+		"testdata/record_compressed_zstd.sequencefile",
+		RecordCompression,
+		ZstdCompression,
+		ZstdClassName,
+	},
+	{
+		"testdata/block_compressed_zstd.sequencefile",
+		BlockCompression,
+		ZstdCompression,
+		ZstdClassName,
+	},
 }
 
 func TestReadFile(t *testing.T) {

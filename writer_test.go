@@ -94,6 +94,7 @@ func TestWriterRoundTrip(t *testing.T) {
 		{RecordCompression, SnappyCompression},
 		{BlockCompression, GzipCompression},
 		{BlockCompression, SnappyCompression},
+		{RecordCompression, ZstdCompression},
 	}
 
 	pairs := []writePair{

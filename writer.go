@@ -200,6 +200,8 @@ func (w *Writer) codecName(codec CompressionCodec) (string, error) {
 		return "org.apache.hadoop.io.compress.GzipCodec", nil
 	case SnappyCompression:
 		return "org.apache.hadoop.io.compress.SnappyCodec", nil
+	case ZstdCompression:
+		return "org.apache.hadoop.io.compress.ZStandardCodec", nil
 	default:
 		return "", fmt.Errorf("Unknown compression codec: %d", codec)
 	}
@@ -211,6 +213,8 @@ func (w *Writer) newCompressor(codec CompressionCodec) (compressor, error) {
 		return &gzipCompressor{}, nil
 	case SnappyCompression:
 		return snappyCompressor{snappyDefaultChunkSize}, nil
+	case ZstdCompression:
+		return zstdCompressor{}, nil
 	default:
 		return nil, fmt.Errorf("Unknown compression codec %d", w.cfg.CompressionCodec)
 	}
