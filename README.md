@@ -1,7 +1,7 @@
 Sequencefile
 ============
 
-[![GoDoc](https://godoc.org/github.com/colinmarc/sequencefile/web?status.svg)](https://godoc.org/github.com/colinmarc/sequencefile) [![build](https://travis-ci.org/colinmarc/sequencefile.svg?branch=master)](https://travis-ci.org/colinmarc/sequencefile)
+[![Go Reference](https://pkg.go.dev/badge/github.com/colinmarc/sequencefile.svg)](https://pkg.go.dev/github.com/colinmarc/sequencefile)
 
 This is a native Go implementation of [Hadoop's SequenceFile format][1].
 
