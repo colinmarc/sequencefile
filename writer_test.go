@@ -83,23 +83,24 @@ func TestWriterCompressionSettings(t *testing.T) {
 }
 
 type compressionSpec struct {
+	name        string
 	compression Compression
 	codec       CompressionCodec
 }
 
-func TestWriterRoundTrip(t *testing.T) {
-	compressions := []compressionSpec{
-		{NoCompression, 0},
-		{RecordCompression, GzipCompression},
-		{BlockCompression, GzipCompression},
-		{RecordCompression, Bzip2Compression},
-		{BlockCompression, Bzip2Compression},
-		{RecordCompression, SnappyCompression},
-		{BlockCompression, SnappyCompression},
-		{RecordCompression, ZstdCompression},
-		{BlockCompression, ZstdCompression},
-	}
+var compressions = []compressionSpec{
+	{"none", NoCompression, 0},
+	{"gzip/record", RecordCompression, GzipCompression},
+	{"gzip/block", BlockCompression, GzipCompression},
+	{"bzip2/record", RecordCompression, Bzip2Compression},
+	{"bzip2/block", BlockCompression, Bzip2Compression},
+	{"snappy/record", RecordCompression, SnappyCompression},
+	{"snappy/block", BlockCompression, SnappyCompression},
+	{"zstd/record", RecordCompression, ZstdCompression},
+	{"zstd/block", BlockCompression, ZstdCompression},
+}
 
+func TestWriterRoundTrip(t *testing.T) {
 	pairs := []writePair{
 		{"foo", int32(42)},
 		{"bar", int32(-1)},
@@ -110,69 +111,67 @@ func TestWriterRoundTrip(t *testing.T) {
 	digests := map[uint64]bool{}
 
 	for _, cmp := range compressions {
-		buf := assertWrite(t,
-			&WriterConfig{
-				Compression:      cmp.compression,
-				CompressionCodec: cmp.codec,
-				KeyClass:         TextClassName,
-				ValueClass:       IntWritableClassName,
-				Rand:             rand.New(rand.NewSource(seed)),
-			},
-			pairs,
-		)
+		t.Run(cmp.name, func(t *testing.T) {
+			buf := assertWrite(t,
+				&WriterConfig{
+					Compression:      cmp.compression,
+					CompressionCodec: cmp.codec,
+					KeyClass:         TextClassName,
+					ValueClass:       IntWritableClassName,
+					Rand:             rand.New(rand.NewSource(seed)),
+				},
+				pairs,
+			)
 
-		h := fnv.New64()
-		h.Write(buf)
-		digest := h.Sum64()
-		_, found := digests[digest]
-		assert.False(t, found, "Different compressions should have different results")
-		digests[digest] = true
+			h := fnv.New64()
+			h.Write(buf)
+			digest := h.Sum64()
+			_, found := digests[digest]
+			assert.False(t, found, "Different compressions should have different results")
+			digests[digest] = true
 
-		r := NewReader(bytes.NewBuffer(buf))
-		require.NoError(t, r.ReadHeader())
-		for _, p := range pairs {
-			assert.True(t, r.Scan())
-			assert.Equal(t, p.k, Text(r.Key()))
-			assert.Equal(t, p.v, IntWritable(r.Value()))
-		}
-		assert.False(t, r.Scan())
-		assert.NoError(t, r.Err())
+			r := NewReader(bytes.NewBuffer(buf))
+			require.NoError(t, r.ReadHeader())
+			for _, p := range pairs {
+				assert.True(t, r.Scan())
+				assert.Equal(t, p.k, Text(r.Key()))
+				assert.Equal(t, p.v, IntWritable(r.Value()))
+			}
+			assert.False(t, r.Scan())
+			assert.NoError(t, r.Err())
+		})
 	}
 }
 
 func TestWriterLong(t *testing.T) {
-	compressions := []compressionSpec{
-		{NoCompression, 0},
-		{RecordCompression, GzipCompression},
-		{BlockCompression, SnappyCompression},
-	}
-
 	for _, cmp := range compressions {
-		var pairs []writePair
-		value := bytes.Repeat([]byte{0}, 2000)
-		for i := 0; i < 2000; i++ {
-			pairs = append(pairs, writePair{int64(i), value})
-		}
+		t.Run(cmp.name, func(t *testing.T) {
+			var pairs []writePair
+			value := bytes.Repeat([]byte{0}, 2000)
+			for i := 0; i < 2000; i++ {
+				pairs = append(pairs, writePair{int64(i), value})
+			}
 
-		buf := assertWrite(t,
-			&WriterConfig{
-				KeyClass:         LongWritableClassName,
-				ValueClass:       BytesWritableClassName,
-				Compression:      cmp.compression,
-				CompressionCodec: cmp.codec,
-			},
-			pairs,
-		)
+			buf := assertWrite(t,
+				&WriterConfig{
+					KeyClass:         LongWritableClassName,
+					ValueClass:       BytesWritableClassName,
+					Compression:      cmp.compression,
+					CompressionCodec: cmp.codec,
+				},
+				pairs,
+			)
 
-		r := NewReader(bytes.NewBuffer(buf))
-		require.NoError(t, r.ReadHeader())
-		for _, p := range pairs {
-			assert.True(t, r.Scan())
-			assert.Equal(t, p.k, LongWritable(r.Key()))
-			assert.Equal(t, p.v, BytesWritable(r.Value()))
-		}
-		assert.False(t, r.Scan())
-		assert.NoError(t, r.Err())
+			r := NewReader(bytes.NewBuffer(buf))
+			require.NoError(t, r.ReadHeader())
+			for _, p := range pairs {
+				assert.True(t, r.Scan())
+				assert.Equal(t, p.k, LongWritable(r.Key()))
+				assert.Equal(t, p.v, BytesWritable(r.Value()))
+			}
+			assert.False(t, r.Scan())
+			assert.NoError(t, r.Err())
+		})
 	}
 }
 
