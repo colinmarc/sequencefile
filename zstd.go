@@ -26,23 +26,30 @@ func (z *zstdReaderWrapper) Close() error {
 }
 
 type zstdCompressor struct {
+	zc  *zstd.Encoder
+	buf bytes.Buffer
 }
 
-func (z zstdCompressor) compress(src []byte) ([]byte, error) {
-	var out bytes.Buffer
-	enc, err := zstd.NewWriter(&out)
-	if err != nil {
+func (c zstdCompressor) compress(src []byte) ([]byte, error) {
+	if c.zc != nil {
+		c.buf.Reset()
+		c.zc.Reset(&c.buf)
+	} else {
+		zc, err := zstd.NewWriter(&c.buf)
+		if err != nil {
+			return nil, err
+		}
+
+		c.zc = zc
+	}
+
+	if _, err := c.zc.Write(src); err != nil {
 		return nil, err
 	}
-	in := bytes.NewReader(src)
-	_, err = io.Copy(enc, in)
-	if err != nil {
-		enc.Close()
+
+	if err := c.zc.Close(); err != nil {
 		return nil, err
 	}
-	err = enc.Close()
-	if err != nil {
-		return nil, err
-	}
-	return out.Bytes(), nil
+
+	return c.buf.Bytes(), nil
 }
