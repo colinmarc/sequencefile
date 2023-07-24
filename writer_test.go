@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"hash/fnv"
-	"io/ioutil"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
@@ -45,7 +45,7 @@ func TestWriter(t *testing.T) {
 		},
 	)
 
-	fbytes, err := ioutil.ReadFile("testdata/uncompressed_written.sequencefile")
+	fbytes, err := os.ReadFile("testdata/uncompressed_written.sequencefile")
 	require.NoError(t, err)
 	assert.Equal(t, fbytes, buf)
 }

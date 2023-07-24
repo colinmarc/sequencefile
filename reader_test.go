@@ -1,6 +1,7 @@
 package sequencefile
 
 import (
+	"io"
 	"os"
 	"testing"
 
@@ -114,7 +115,7 @@ func testFileSpec(t *testing.T, r *Reader, spec fileSpec) {
 	assert.Equal(t, spec.classname, r.Header.CompressionCodecClassName, "The compression codec should be set")
 
 	file := r.reader.(*os.File)
-	offset1, _ := file.Seek(0, os.SEEK_CUR)
+	offset1, _ := file.Seek(0, io.SeekCurrent)
 	ok := r.Scan()
 	require.NoError(t, r.Err(), "ScanKey should succeed")
 	require.True(t, ok, "ScanKey should succeed")
@@ -134,7 +135,7 @@ func testFileSpec(t *testing.T, r *Reader, spec fileSpec) {
 	require.NoError(t, r.Err(), "Scan at the end of the file should fail without an error")
 	require.False(t, ok, "Scan at the end of the file should fail without an error")
 
-	file.Seek(offset1, os.SEEK_SET)
+	file.Seek(offset1, io.SeekStart)
 	r.Reset()
 	ok = r.Scan()
 	require.NoError(t, r.Err(), "Scan should succeed")

@@ -205,7 +205,7 @@ func (w *Writer) codecName(codec CompressionCodec) (string, error) {
 	case ZstdCompression:
 		return "org.apache.hadoop.io.compress.ZStandardCodec", nil
 	default:
-		return "", fmt.Errorf("Unknown compression codec: %d", codec)
+		return "", fmt.Errorf("unknown compression codec: %d", codec)
 	}
 }
 
@@ -220,7 +220,7 @@ func (w *Writer) newCompressor(codec CompressionCodec) (compressor, error) {
 	case ZstdCompression:
 		return zstdCompressor{}, nil
 	default:
-		return nil, fmt.Errorf("Unknown compression codec %d", w.cfg.CompressionCodec)
+		return nil, fmt.Errorf("unknown compression codec %d", w.cfg.CompressionCodec)
 	}
 }
 
@@ -239,7 +239,7 @@ func (w *Writer) initPairWriter() error {
 		}
 	}
 	if w.pairs == nil {
-		return fmt.Errorf("Unknown compression type %d", w.cfg.Compression)
+		return fmt.Errorf("unknown compression type %d", w.cfg.Compression)
 	}
 	return w.pairs.Init()
 }

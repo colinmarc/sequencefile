@@ -13,7 +13,6 @@ type blockReader struct {
 	i     int
 	key   []byte
 	value []byte
-	err   error
 
 	keys       []byte
 	keyLengths []int

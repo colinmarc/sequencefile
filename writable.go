@@ -31,7 +31,7 @@ func Text(b []byte) string {
 		panic("sequencefile: unwrapping Text: bad length")
 	}
 
-	return string(buf.Bytes())
+	return buf.String()
 }
 
 // IntWritable unwraps an IntWritable and returns the deserialized int32.
@@ -123,6 +123,6 @@ func NewWritableWriter(className string) (WritableWriter, error) {
 	case LongWritableClassName:
 		return writeLong, nil
 	default:
-		return nil, fmt.Errorf("Unknown writable class %s", className)
+		return nil, fmt.Errorf("unknown writable class %s", className)
 	}
 }
